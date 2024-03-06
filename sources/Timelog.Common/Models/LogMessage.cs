@@ -15,31 +15,31 @@ namespace Timelog.Common.Models
     }
 
     [Serializable]
-    public class LogMessage
+    public struct LogMessage
     {
-        public Guid ApplicationKey { get; set; }
+        public Guid ApplicationKey;
 
-        public string Domain { get; set ; }
+        public string Domain;
 
-        public Guid TransactionID { get; set; }
+        public Guid TransactionID;
 
-        public Commands Command { get; set; }
+        public Commands Command;
 
-        public DateTime? OriginTimestamp { get; set; } = DateTime.UtcNow;
+        public DateTime? OriginTimestamp;
 
-        public DateTime? TimeServerTimeStamp { get; set;}
+        public DateTime? TimeServerTimeStamp;
 
-        public object Reserved { get; set; }
+        public object Reserved;
 
-        public Message Message { get; set; }
+        public Message Message;
     }
 
     [Serializable]
-    public class Message
+    public struct Message
     {
-        public string Header { get; set; }
+        public string Header;
 
-        public byte[] Data { get; set; }
+        public byte[] Data;
 
     }
 }

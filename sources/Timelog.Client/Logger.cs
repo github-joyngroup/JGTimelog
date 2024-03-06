@@ -30,21 +30,15 @@ namespace Timelog.Client
         
         public static void Log(LogLevel logLevel, LogMessage message)
         {
-            if (message is null) { return; }
-            
             byte[] logBytes = ByteSerializer<LogMessage>.Serialize(message);
 
             try
             {
-                udpClient.Send(logBytes, logBytes.Length, ClientConfiguration.TimelogServerHost, ClientConfiguration.TimelogServerPort);
-
-                //print the udpClient send buffer size
-                
+                udpClient.Send(logBytes, logBytes.Length, ClientConfiguration.TimelogServerHost, ClientConfiguration.TimelogServerPort);                
             }
             catch
             {
             }
-            
         }
 
         
