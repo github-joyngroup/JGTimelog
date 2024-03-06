@@ -23,7 +23,7 @@ namespace Timelog.Server
         /// <summary>
         /// The number of entries to be accepted on the global internal cache. Default is 1024.
         /// </summary>
-        public int InternalCacheMaxEntries { get; set; } = 10;
+        public int InternalCacheMaxEntries { get; set; } = 100;
 
         /// <summary>
         /// The maximum number of viewers at the same time. Default is 64.
@@ -33,16 +33,21 @@ namespace Timelog.Server
         /// <summary>
         /// The maximum number of log files to be created. Log files are rotating. Default is 20.
         /// </summary>
-        public int MaxLogFiles { get; set; } = 20;
+        public int MaxLogFiles { get; set; } = 10;
 
         /// <summary>
         /// The maximum number of entries per log file. Default is 100000.
         /// </summary>
-        public int MaxLogFileEntries { get; set; } = 100000;
+        public int MaxLogFileEntries { get; set; } = 1000;
 
         /// <summary>
         /// The network port number that the viewer register will be listening. Default is 8888.
         /// </summary>
         public int TimelogViewerRegisterPort { get; set; } = 8888;
+
+        /// <summary>
+        /// The path of the log files. Default is the "Timelog" folder inside the current user temporary folder.
+        /// </summary>
+        public string LogFilesPath { get; set; } = Path.Combine(Path.GetTempPath(), "Timelog");
     }
 }
