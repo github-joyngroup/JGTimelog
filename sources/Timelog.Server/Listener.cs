@@ -111,6 +111,9 @@ namespace Timelog.Server
                     }
 
                     Console.WriteLine($"{i} --> {System.Text.Json.JsonSerializer.Serialize(receivedLogMessage)[..100]}...");
+
+                    Timelog.TestClientEfficiency.Program.ProcessLogMessage(receivedLogMessage);
+
                 }
                 catch (Exception e)
                 {

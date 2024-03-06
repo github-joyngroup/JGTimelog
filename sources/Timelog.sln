@@ -11,6 +11,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Timelog.Tests", "Timelog.Te
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Timelog.Common", "Timelog.Common\Timelog.Common.csproj", "{053D876D-A37A-4960-945F-AF8F13F446B4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Timelog.Viewer", "Timelog.Viewer\Timelog.Viewer.csproj", "{2A3D2130-66D3-437E-B29E-86720C2F6BE6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Timelog.TestClientEfficiency", "Timelog.TestClientEfficiency\Timelog.TestClientEfficiency.csproj", "{D32606C2-325F-4ED3-A625-298AA93E800E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +37,14 @@ Global
 		{053D876D-A37A-4960-945F-AF8F13F446B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{053D876D-A37A-4960-945F-AF8F13F446B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{053D876D-A37A-4960-945F-AF8F13F446B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A3D2130-66D3-437E-B29E-86720C2F6BE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A3D2130-66D3-437E-B29E-86720C2F6BE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A3D2130-66D3-437E-B29E-86720C2F6BE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A3D2130-66D3-437E-B29E-86720C2F6BE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D32606C2-325F-4ED3-A625-298AA93E800E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D32606C2-325F-4ED3-A625-298AA93E800E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D32606C2-325F-4ED3-A625-298AA93E800E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D32606C2-325F-4ED3-A625-298AA93E800E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

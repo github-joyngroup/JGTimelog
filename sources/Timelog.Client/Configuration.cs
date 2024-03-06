@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,5 +24,31 @@ namespace Timelog.Client
         /// </summary>
         public int TimelogServerPort { get; set; }
 
+        /// <summary>
+        /// The Timelog level
+        /// </summary>
+        public int LogLevel { get; set; }
+
+        /// <summary>
+        /// Client Timestamp
+        /// </summary>
+        public bool UseClientTimestamp { get; set; }
+
+
+        public static Configuration ReadConfiguration(string filePath)
+        {
+            var configuration = new Configuration();
+            var configurationBuilder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile(filePath);
+
+            IConfigurationRoot configRoot = configurationBuilder.Build();
+            configRoot.Bind(configuration);
+
+            // Add additional validation if needed
+
+            return configuration;
+        }
     }
 }
+

@@ -25,7 +25,7 @@ namespace Timelog.Common.Models
 
         public Commands Command { get; set; }
 
-        public DateTime? OriginTimestamp { get; set; } = DateTime.UtcNow;
+        public DateTime? OriginTimestamp { get; set; }
 
         public DateTime? TimeServerTimeStamp { get; set;}
 
