@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 
-namespace Timelog.Client
+namespace Timelog.ClientReport
 {
     internal class Program
     {
@@ -14,7 +14,7 @@ namespace Timelog.Client
         {
             try
             {
-                var configuration = Configuration.ReadConfiguration("appsettings.json");
+                var configuration = ClientReport.Configuration.ReadConfiguration("appsettings.json");
                 InitializeApplication(configuration);
                 RunApplication();
             }
@@ -26,7 +26,7 @@ namespace Timelog.Client
 
         private static void InitializeApplication(Configuration configuration)
         {
-            ClientLogger.Init(configuration, null);
+            ClientReportLogger.Init(configuration, null);
             // Other initialization logic if needed
         }
 
@@ -34,7 +34,7 @@ namespace Timelog.Client
         {
             var logMessage = new Common.Models.LogMessage
             {
-                ApplicationKey = ClientLogger.ClientConfiguration.ApplicationKey,
+                ApplicationKey = ClientReportLogger.ClientConfiguration.ApplicationKey,
                 Command = Common.Models.Commands.Start,
                 Domain = "",
                 TransactionID = Guid.NewGuid(),
@@ -50,7 +50,7 @@ namespace Timelog.Client
                 logMessage.Domain = $"{i}";
 
 
-                Timelog.Client.ClientLogger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
+                ClientReportLogger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
 
                 i++;
 
@@ -65,7 +65,7 @@ namespace Timelog.Client
                 {
                     logMessage.Domain = $"{input}";
 
-                    Timelog.Client.ClientLogger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
+                    ClientReportLogger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
                 }
             } while (input != "exit");
         }

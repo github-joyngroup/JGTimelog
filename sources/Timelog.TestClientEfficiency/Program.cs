@@ -81,7 +81,8 @@ namespace Timelog.TestClientEfficiency
                 }
             }
 
-            0.ToString();
+
+            PrintGraph();
         }
 
 
@@ -158,6 +159,17 @@ namespace Timelog.TestClientEfficiency
                 {
                     Console.WriteLine($"High processing time detected: {processingTime.TotalMilliseconds} ms");
                 }
+            }
+
+        }
+        public static void PrintGraph()
+        {
+            Console.WriteLine("Command Frequency Graph:");
+
+            foreach (var kvp in commandCountDictionary)
+            {
+                string commandGraph = new string('*', kvp.Value);
+                Console.WriteLine($"{kvp.Key}: {commandGraph}");
             }
         }
     }
