@@ -31,33 +31,34 @@ namespace Timelog.Tests
                 Message = new Common.Models.Message { Header = $"", Data = Encoding.UTF8.GetBytes($"") },
             };
 
-            const int MAX = 300;
+            const int MAX = 10000;
             
             Console.WriteLine($"Start logging {MAX} messages");
             int i = 0;
             while (i < MAX)
             {
+                //convert the integer to binary and send it as the domain
+                //logMessage.Domain = $"{Convert.ToString(i,2)}";
                 logMessage.Domain = $"{i}";
-
 
                 Timelog.Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
                 
                 i++;
-                
+                //Thread.Sleep(10);
             }
 
-            Console.WriteLine("Enter a message to log (press Enter to log, type 'exit' to exit):");
-            string input;
-            do
-            {
-                input = Console.ReadLine();
-                if (input != "exit")
-                {
-                    logMessage.Domain = $"{input}";
+            //Console.WriteLine("Enter a message to log (press Enter to log, type 'exit' to exit):");
+            //string input;
+            //do
+            //{
+            //    input = Console.ReadLine();
+            //    if (input != "exit")
+            //    {
+            //        logMessage.Domain = $"{input}";
 
-                    Timelog.Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
-                }
-            } while (input != "exit");
+            //        Timelog.Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
+            //    }
+            //} while (input != "exit");
         }
     }
 }

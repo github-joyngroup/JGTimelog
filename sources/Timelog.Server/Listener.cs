@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using Microsoft.Extensions.Logging;
 using Timelog.Common;
 using Timelog.Common.Models;
+using System.Threading;
 
 namespace Timelog.Server
 {
@@ -20,7 +21,10 @@ namespace Timelog.Server
         private static UdpClient? udpServer;
         private static List<Guid>? acceptedApplicationKeys;
         private static IPEndPoint? clientEndPoint;
-        
+        private static QueueManager? queueManager;
+        private static LogFileManager? logFileManager;
+        private static RoundRobinArray<LogMessage>? receivedDataQueue;
+
         static void Main(string[] args)
         {
 #warning This is a temporary main method to test the Listener class. TODO: Load the configuration from a file.
@@ -32,9 +36,25 @@ namespace Timelog.Server
                 },
             };
 
-            Startup(configuration, null, new System.Threading.CancellationToken());
+            Startup(configuration, null);
 
+            
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+            var t = new Thread(() => Listening(null, cancellationTokenSource.Token));
+                t.Start();
+
+            Thread.Sleep(25000);
+            
+
+            //Listening(queueManager.LogHandler, new System.Threading.CancellationToken());
+            //Listening(null, new System.Threading.CancellationToken());
+
+            //Dump the receivedDataQueue to the log file
+            logFileManager?.DumpToFile(0, receivedDataQueue.GetItems());
+            //logFileManager?.DumpToFileBinary(0, receivedDataQueue.GetItems());
         }
+                
 
         /// <summary>
         /// Start the server, listen to the UDP port, and handle the received data
@@ -42,22 +62,27 @@ namespace Timelog.Server
         /// <param name="configuration"></param>
         /// <param name="logger"></param>
         /// <param name="cancellationToken"></param>
-        public static async void Startup(Configuration configuration, ILogger logger, CancellationToken cancellationToken)
+        public static async void Startup(Configuration configuration, ILogger logger)
         {
             ServerConfiguration = configuration;
             _logger = logger;
             
             LoadAuthorizedClients();
 
-            QueueManager.Initialize(configuration.InternalCacheMaxEntries);
+            //initialize the queue manager to handle the received data
+            //queueManager = new QueueManager(configuration.InternalCacheMaxEntries);
+            receivedDataQueue = new RoundRobinArray<LogMessage>(configuration.InternalCacheMaxEntries);
+
+            //initialize the log file manager to handle the log files
+            logFileManager = new LogFileManager(configuration.LogFilesPath, configuration.MaxLogFiles, configuration.MaxLogFileEntries);
 
             udpServer = new UdpClient(configuration.TimelogServerPort);
             clientEndPoint = new IPEndPoint(IPAddress.Any, ServerConfiguration.TimelogServerPort);
 
             Console.WriteLine($"Timelog.Server is listening on port {configuration.TimelogServerPort}.");
 
-            Listening(QueueManager.LogHandler, cancellationToken);
-                        
+            ////new Thread(() => Listening(queueManager.LogHandler, cancellationToken)).Start();
+            //Listening(queueManager.LogHandler, cancellationToken);
         }
 
         /// <summary>
@@ -83,17 +108,13 @@ namespace Timelog.Server
         /// <param name="logHandler">Handler to work the received LogMessage</param>
         /// <param name="cancellationToken">Cancellation token to cancel the reception of data</param>
         /// <returns></returns>
-        private static void Listening(Action<LogMessage> logHandler, CancellationToken cancellationToken)
+        public static void Listening(Action<LogMessage> logHandler, CancellationToken cancellationToken)
         {
-            int i = 0;
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
-                {
+                {                    
                     //Receive the data from the UDP port
-                    
-                    _logger?.LogInformation($"Timelog.Server is listening on port {ServerConfiguration.TimelogServerPort}.");
-
                     var receivedData = udpServer?.Receive(ref clientEndPoint);
                     
                     if (receivedData is null) { continue; }
@@ -107,20 +128,23 @@ namespace Timelog.Server
                     //Check if the application key is authorized, and if so, handle the received data
                     if (IsAuthorized(receivedLogMessage.ApplicationKey))
                     {
-                        logHandler(receivedLogMessage);
+                        receivedDataQueue?.Add(receivedLogMessage);
+                        //logHandler(receivedLogMessage);
                     }
 
-                    Console.WriteLine($"{i} --> {System.Text.Json.JsonSerializer.Serialize(receivedLogMessage)[..100]}...");
+                    //Console.WriteLine($"{i} --> {System.Text.Json.JsonSerializer.Serialize(receivedLogMessage)[..100]}...");
                 }
                 catch (Exception e)
                 {
                     _logger?.LogError($"Timelog.Server error occurred: {e.Message}");
                     Console.WriteLine($"Timelog.Server error occurred: {e.Message}");
                 }
-                i++;
-            }
-        }
                 
+            }
+
+            
+        }
+
         /// <summary>
         /// Check if the application key is authorized
         /// </summary>
