@@ -20,6 +20,10 @@ namespace Timelog.Common.Models
         public Guid ApplicationKey;
 
         public string Domain;
+        
+        public string LogLevelClient;
+        
+        public string TagClient;
 
         public Guid TransactionID;
 

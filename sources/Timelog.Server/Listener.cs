@@ -11,10 +11,12 @@ using Microsoft.Extensions.Logging;
 using Timelog.Common;
 using Timelog.Common.Models;
 using System.Threading;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace Timelog.Server
 {
-    public static class Listener
+    public class Listener : BackgroundService
     {
         private static ILogger? _logger;
         private static Configuration? ServerConfiguration;
@@ -24,37 +26,61 @@ namespace Timelog.Server
         private static QueueManager? queueManager;
         private static LogFileManager? logFileManager;
         private static RoundRobinArray<LogMessage>? receivedDataQueue;
+        private static CancellationTokenSource _stoppingSource;
 
-        static void Main(string[] args)
+        //        static void Main(string[] args)
+        //        {
+        //#warning This is a temporary main method to test the Listener class. TODO: Load the configuration from a file.
+        //            var configuration = new Configuration
+        //            {
+        //                AuthorizedAppKeys = new List<Guid>
+        //                {
+        //                    Guid.Parse("8ce94d5e-b2a3-4685-9e6c-ab21410b595f"),
+        //                },
+        //            };
+
+        //            Startup(configuration, null);
+
+
+        //            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+        //            var t = new Thread(() => Listening(null, cancellationTokenSource.Token));
+        //                t.Start();
+
+        //            Thread.Sleep(25000);
+
+
+        //            //Listening(queueManager.LogHandler, new System.Threading.CancellationToken());
+        //            //Listening(null, new System.Threading.CancellationToken());
+
+        //            //Dump the receivedDataQueue to the log file
+        //            logFileManager?.DumpToFile(0, receivedDataQueue.GetItems());
+        //            //logFileManager?.DumpToFileBinary(0, receivedDataQueue.GetItems());
+        //        }
+
+      
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-#warning This is a temporary main method to test the Listener class. TODO: Load the configuration from a file.
-            var configuration = new Configuration
-            {
-                AuthorizedAppKeys = new List<Guid>
-                {
-                    Guid.Parse("8ce94d5e-b2a3-4685-9e6c-ab21410b595f"),
-                },
-            };
-
-            Startup(configuration, null);
-
+            _stoppingSource = new CancellationTokenSource();
             
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            new Thread(() => Listening(null, _stoppingSource.Token)).Start();
 
-            var t = new Thread(() => Listening(null, cancellationTokenSource.Token));
-                t.Start();
-
-            Thread.Sleep(25000);
-            
-
-            //Listening(queueManager.LogHandler, new System.Threading.CancellationToken());
-            //Listening(null, new System.Threading.CancellationToken());
-
-            //Dump the receivedDataQueue to the log file
-            logFileManager?.DumpToFile(0, receivedDataQueue.GetItems());
-            //logFileManager?.DumpToFileBinary(0, receivedDataQueue.GetItems());
+            return Task.CompletedTask;
         }
-                
+
+        public override async Task StopAsync(CancellationToken cancellationToken)
+        {
+            _stoppingSource.Cancel();
+            await Task.Run(() =>
+            {
+                Console.WriteLine($"Timelog.Server is being stopped...");
+                udpServer?.Close();
+                logFileManager?.DumpToFile(0, receivedDataQueue.GetItems());
+
+            }, CancellationToken.None);
+
+            await base.StopAsync(_stoppingSource.Token);
+        }
 
         /// <summary>
         /// Start the server, listen to the UDP port, and handle the received data
@@ -62,10 +88,10 @@ namespace Timelog.Server
         /// <param name="configuration"></param>
         /// <param name="logger"></param>
         /// <param name="cancellationToken"></param>
-        public static async void Startup(Configuration configuration, ILogger logger)
+        public static async void Startup(Configuration configuration)
         {
             ServerConfiguration = configuration;
-            _logger = logger;
+            //_logger = logger;
             
             LoadAuthorizedClients();
 
@@ -82,7 +108,7 @@ namespace Timelog.Server
             Console.WriteLine($"Timelog.Server is listening on port {configuration.TimelogServerPort}.");
 
             ////new Thread(() => Listening(queueManager.LogHandler, cancellationToken)).Start();
-            //Listening(queueManager.LogHandler, cancellationToken);
+            
         }
 
         /// <summary>
