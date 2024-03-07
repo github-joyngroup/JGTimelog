@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -54,18 +55,20 @@ namespace Timelog.ClientReport
                 Domain = "",
                 TransactionID = Guid.NewGuid(),
                 Message = new Common.Models.Message { Header = $"", Data = Encoding.UTF8.GetBytes($"") },
+                LogLevelClient = Microsoft.Extensions.Logging.LogLevel.Trace
             };
 
-            const int MAX = 300;
+            const int MAX = 1;
 
             Console.WriteLine($"Start logging {MAX} messages");
             int i = 0;
+
             while (i < MAX)
             {
                 logMessage.Domain = $"{i}";
 
 
-                ClientReportLogger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
+                ClientReportLogger.Log(logMessage);
 
                 i++;
 
@@ -80,7 +83,7 @@ namespace Timelog.ClientReport
                 {
                     logMessage.Domain = $"{input}";
 
-                    ClientReportLogger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
+                    ClientReportLogger.Log(logMessage);
                 }
             } while (input != "exit");
         }

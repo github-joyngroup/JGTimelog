@@ -43,17 +43,18 @@ namespace Timelog.Client
         // Existing Log method
         public static void Log(LogLevel logLevel, LogMessage message)
         {
-            if (((int)logLevel) >= ClientConfiguration.LogLevel  && message != null)
+            
+            if (((int)message.LogLevelClient) >= (int)ClientConfiguration.LogLevel)  //&& message != null)
             {
-                byte[] logBytes = SerializeToBinary(message);
+                byte[] logBytes = ByteSerializer<LogMessage>.Serialize(message);
 
                 try
                 {
-                    if(ClientConfiguration.UseClientTimestamp)
+                    if (ClientConfiguration.UseClientTimestamp)
                     {
                         message.OriginTimestamp = DateTime.UtcNow;
                     }
-                    
+
                     udpClient.Send(logBytes, logBytes.Length, ClientConfiguration.TimelogServerHost, ClientConfiguration.TimelogServerPort);
 
 
@@ -64,6 +65,7 @@ namespace Timelog.Client
                     _logger?.LogError("Error sending log message to server.");
                 }
             }
+			
            
         }
 

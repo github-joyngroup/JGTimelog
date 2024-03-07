@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +28,7 @@ namespace Timelog.Client
         /// <summary>
         /// The Timelog level
         /// </summary>
-        public int LogLevel { get; set; }
+        public LogLevel LogLevel { get; set; }
 
         /// <summary>
         /// Client Timestamp

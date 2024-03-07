@@ -46,14 +46,12 @@ namespace Timelog.Server
 
             LoadAuthorizedClients();
 
-            QueueManager.Initialize(configuration.InternalCacheMaxEntries);
-
             tcpListener = new TcpListener(IPAddress.Any, configuration.TimelogServerPort);
             tcpListener.Start();
 
             Console.WriteLine($"Timelog.Server is listening on port {configuration.TimelogServerPort}.");
 
-            Listening(QueueManager.LogHandler, cancellationToken);
+            Listening(null, cancellationToken);
         }
 
         /// <summary>

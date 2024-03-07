@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Timelog.Server
 {
-    internal class RoundRobinArray<T> where T : class
+    internal class RoundRobinArray<T> where T : struct
     {
         private readonly T[] _array;
         private readonly int _limit;

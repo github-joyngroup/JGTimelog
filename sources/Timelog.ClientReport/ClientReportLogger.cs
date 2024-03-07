@@ -50,9 +50,9 @@ namespace Timelog.ClientReport
         }
 
         // Existing Log method
-        public static void Log(LogLevel logLevel, LogMessage message)
+        public static void Log(LogMessage message)
         {
-            if (((int)logLevel) >= ClientConfiguration.LogLevel && message != null)
+            if (((int)message.LogLevelClient) >= (int)ClientConfiguration.LogLevel)
             {
                 string logString = JsonConvert.SerializeObject(message);
 
