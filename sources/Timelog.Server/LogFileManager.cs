@@ -153,10 +153,9 @@ namespace Timelog.Server
 
             try
             {
-                DateTime oldestTimestamp = buffer.Where(entry => entry.ApplicationKey != Guid.Empty)
-                                                 .Min(entry => entry.TimeServerTimeStamp.Value);
-                DateTime newestTimestamp = buffer.Where(entry => entry.ApplicationKey != Guid.Empty)
-                                                 .Max(entry => entry.TimeServerTimeStamp.Value);
+                var list = buffer.Where(entry => entry.ApplicationKey != Guid.Empty);
+                DateTime oldestTimestamp = list != null && list.Any() ? list.Min(entry => entry.TimeServerTimeStamp.Value) : DateTime.MinValue;
+                DateTime newestTimestamp = list != null && list.Any() ? list.Max(entry => entry.TimeServerTimeStamp.Value) : DateTime.MinValue;
 
                 JsonSerializerOptions options = new JsonSerializerOptions
                 {
@@ -184,59 +183,59 @@ namespace Timelog.Server
             }
         }
 
-        public void DumpToFileBinary(int index, LogMessage[] buffer, bool resetIfExists = true)
-        {
-            //if (buffer == null || !buffer.Any(entry => entry != null)) { return; }
-            string filePath = string.Format(_logFilePath, index.ToString().PadLeft(5, '0'));
+        //public void DumpToFileBinary(int index, LogMessage[] buffer, bool resetIfExists = true)
+        //{
+        //    //if (buffer == null || !buffer.Any(entry => entry != null)) { return; }
+        //    string filePath = string.Format(_logFilePath, index.ToString().PadLeft(5, '0'));
 
-            // If the file exists but it's older than today than reset it anyway
-            if (!resetIfExists && File.Exists(filePath) && DateTime.Now.DayOfYear > File.GetLastWriteTime(filePath).DayOfYear)
-            {
-                resetIfExists = true;
-            }
+        //    // If the file exists but it's older than today than reset it anyway
+        //    if (!resetIfExists && File.Exists(filePath) && DateTime.Now.DayOfYear > File.GetLastWriteTime(filePath).DayOfYear)
+        //    {
+        //        resetIfExists = true;
+        //    }
 
-            try
-            {
-                DateTime oldestTimestamp = buffer//.Where(entry => entry != null)
-                                                 .Min(entry => entry.TimeServerTimeStamp.Value);
-                DateTime newestTimestamp = buffer//.Where(entry => entry != null)
-                                                 .Max(entry => entry.TimeServerTimeStamp.Value);
+        //    try
+        //    {
+        //        DateTime oldestTimestamp = buffer//.Where(entry => entry != null)
+        //                                         .Min(entry => entry.TimeServerTimeStamp.Value);
+        //        DateTime newestTimestamp = buffer//.Where(entry => entry != null)
+        //                                         .Max(entry => entry.TimeServerTimeStamp.Value);
 
-                using (StreamWriter writer = new StreamWriter(filePath, append: !resetIfExists))
-                {
-                    writer.WriteLine($"BeginAt: {oldestTimestamp.Ticks}");
-                    writer.WriteLine($"EndAt: {newestTimestamp.Ticks}");
-                    //foreach (var entry in buffer)
-                    //{
-                    //    writer.WriteLine(Convert.ToBase64String(ByteSerializer<LogMessage>.Serialize(entry)));
+        //        using (StreamWriter writer = new StreamWriter(filePath, append: !resetIfExists))
+        //        {
+        //            writer.WriteLine($"BeginAt: {oldestTimestamp.Ticks}");
+        //            writer.WriteLine($"EndAt: {newestTimestamp.Ticks}");
+        //            //foreach (var entry in buffer)
+        //            //{
+        //            //    writer.WriteLine(Convert.ToBase64String(ByteSerializer<LogMessage>.Serialize(entry)));
                         
-                    //}
-                }
+        //            //}
+        //        }
 
-                //using (FileStream writer = new FileStream(filePath, FileMode.Append))
-                //{
-                //    BinaryFormatter formatter = new BinaryFormatter();
-                //    foreach (var entry in buffer)
-                //    {
-                //        formatter.Serialize(writer, entry);
-                //    }
-                //}
+        //        //using (FileStream writer = new FileStream(filePath, FileMode.Append))
+        //        //{
+        //        //    BinaryFormatter formatter = new BinaryFormatter();
+        //        //    foreach (var entry in buffer)
+        //        //    {
+        //        //        formatter.Serialize(writer, entry);
+        //        //    }
+        //        //}
 
-                using (BinaryWriter writer = new BinaryWriter(File.Open(filePath, FileMode.Append)))
-                {
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    foreach (var entry in buffer)
-                    {
-                        formatter.Serialize(writer.BaseStream, entry);
-                    }
-                }
+        //        using (BinaryWriter writer = new BinaryWriter(File.Open(filePath, FileMode.Append)))
+        //        {
+        //            BinaryFormatter formatter = new BinaryFormatter();
+        //            foreach (var entry in buffer)
+        //            {
+        //                formatter.Serialize(writer.BaseStream, entry);
+        //            }
+        //        }
                 
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error writing to log file '{filePath}': {ex.Message}");
-            }
-        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"Error writing to log file '{filePath}': {ex.Message}");
+        //    }
+        //}
 
 
     }
