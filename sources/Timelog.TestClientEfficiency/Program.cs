@@ -22,9 +22,9 @@ namespace Timelog.TestClientEfficiency
         {
             try
             {
-                var configuration = Configuration.ReadConfiguration("appsettings.json");
+                var configuration = ReadConfiguration("appsettings.json", Directory.GetCurrentDirectory());
                 InitializeApplication(configuration);
-                RunApplication();
+                RunApplication(configuration);
             }
             catch (Exception ex)
             {
@@ -32,20 +32,35 @@ namespace Timelog.TestClientEfficiency
             }
         }
 
+        public static Configuration ReadConfiguration(string file, string filePath)
+        {
+            var configuration = new Configuration();
+            var configurationBuilder = new ConfigurationBuilder()
+                .SetBasePath(filePath)
+                .AddJsonFile(file);
+
+            IConfigurationRoot configRoot = configurationBuilder.Build();
+            configRoot.Bind(configuration);
+
+            // Add additional validation if needed
+
+            return configuration;
+        }
+
         private static void InitializeApplication(Configuration configuration)
         {
-            ClientLogger.Init(configuration, null);
+            Logger.Init(configuration, null);
             // Other initialization logic if needed
         }
 
-        private static void RunApplication()
+        private static void RunApplication(Configuration configuration)
         {
-            var logMessage = new Common.Models.LogMessage
+            var logMessage = new LogMessage
             {
-                ApplicationKey = ClientLogger.GetClientConfiguration().ApplicationKey,
-                Command = Common.Models.Commands.Start,
+                ApplicationKey = configuration.ApplicationKey,
+                Command = Commands.Start,
                 TransactionID = Guid.NewGuid(),
-                Message = new Common.Models.Message { Header = $"", Data = Encoding.UTF8.GetBytes($"") },
+                Message = new Message { Header = $"", Data = Encoding.UTF8.GetBytes($"") },
             };
 
             // Consider this table:
@@ -74,7 +89,7 @@ namespace Timelog.TestClientEfficiency
                 {
                     logMessage.Domain = $"{instance}_{messageNumber}";
 
-                    ClientLogger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
+                    Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
 
                     // Wait for the specified time interval
                     Thread.Sleep(timeInterval);

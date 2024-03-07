@@ -49,14 +49,14 @@ namespace Timelog.Server
             
             LoadAuthorizedClients();
 
-            QueueManager.Initialize(configuration.InternalCacheMaxEntries);
+            //QueueManager.Initialize(configuration.InternalCacheMaxEntries);
 
             udpServer = new UdpClient(configuration.TimelogServerPort);
             clientEndPoint = new IPEndPoint(IPAddress.Any, ServerConfiguration.TimelogServerPort);
 
             Console.WriteLine($"Timelog.Server is listening on port {configuration.TimelogServerPort}.");
 
-            Listening(QueueManager.LogHandler, cancellationToken);
+            Listening(null, cancellationToken);
                         
         }
 

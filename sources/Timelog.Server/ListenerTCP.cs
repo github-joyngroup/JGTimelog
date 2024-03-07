@@ -81,14 +81,17 @@ namespace Timelog.Server
         private static void Listening(Action<LogMessage> logHandler, CancellationToken cancellationToken)
         {
             int i = 0;
+
+
+            // Accept incoming connection
+            tcpClient = tcpListener?.AcceptTcpClient();
+            if (tcpClient is null) { return; }
+
+
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    // Accept incoming connection
-                    tcpClient = tcpListener?.AcceptTcpClient();
-                    if (tcpClient is null) { continue; }
-
                     // Receive the data from the TCP client
                     using (var stream = tcpClient.GetStream())
                     using (var reader = new StreamReader(stream, Encoding.UTF8))

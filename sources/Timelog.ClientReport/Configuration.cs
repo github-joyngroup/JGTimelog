@@ -33,22 +33,6 @@ namespace Timelog.ClientReport
         /// Client Timestamp
         /// </summary>
         public bool UseClientTimestamp { get; set; }
-
-
-        public static Configuration ReadConfiguration(string filePath)
-        {
-            var configuration = new Configuration();
-            var configurationBuilder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile(filePath);
-
-            IConfigurationRoot configRoot = configurationBuilder.Build();
-            configRoot.Bind(configuration);
-
-            // Add additional validation if needed
-
-            return configuration;
-        }
     }
 }
 

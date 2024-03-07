@@ -14,14 +14,29 @@ namespace Timelog.ClientReport
         {
             try
             {
-                var configuration = ClientReport.Configuration.ReadConfiguration("appsettings.json");
+                var configuration = ReadConfiguration("appsettings.json", Directory.GetCurrentDirectory());
                 InitializeApplication(configuration);
-                RunApplication();
+                RunApplication(configuration);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error during application initialization: {ex.Message}");
             }
+        }
+
+        public static Configuration ReadConfiguration(string file, string filePath)
+        {
+            var configuration = new Configuration();
+            var configurationBuilder = new ConfigurationBuilder()
+                .SetBasePath(filePath)
+                .AddJsonFile(file);
+
+            IConfigurationRoot configRoot = configurationBuilder.Build();
+            configRoot.Bind(configuration);
+
+            // Add additional validation if needed
+
+            return configuration;
         }
 
         private static void InitializeApplication(Configuration configuration)
@@ -30,7 +45,7 @@ namespace Timelog.ClientReport
             // Other initialization logic if needed
         }
 
-        private static void RunApplication()
+        private static void RunApplication(Configuration configuration)
         {
             var logMessage = new Common.Models.LogMessage
             {

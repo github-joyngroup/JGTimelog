@@ -1,9 +1,11 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Timelog.Client;
 
 namespace Timelog.Tests
 {
@@ -11,17 +13,41 @@ namespace Timelog.Tests
     {
         private static void Main(string[] args)
         {
-            var configuration = new Timelog.Client.Configuration
+            try
             {
-                ApplicationKey = Guid.Parse("8ce94d5e-b2a3-4685-9e6c-ab21410b595f"),
-                TimelogServerHost = "localhost",
-                TimelogServerPort = 7777,
-            };
+                var configuration = ReadConfiguration("appsettings.json", Directory.GetCurrentDirectory());
+                InitializeApplication(configuration);
+                RunApplication(configuration);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during application initialization: {ex.Message}");
+            }
+        }
 
-            Timelog.Client.ClientLogger.Init(configuration, null);
+        public static Configuration ReadConfiguration(string file, string filePath)
+        {
+            var configuration = new Configuration();
+            var configurationBuilder = new ConfigurationBuilder()
+                .SetBasePath(filePath)
+                .AddJsonFile(file);
 
+            IConfigurationRoot configRoot = configurationBuilder.Build();
+            configRoot.Bind(configuration);
 
-            var logMessage = new Timelog.Common.Models.LogMessage
+            // Add additional validation if needed
+
+            return configuration;
+        }
+
+        private static void InitializeApplication(Configuration configuration)
+        {
+            Logger.Init(configuration, null);
+        }
+
+        private static void RunApplication(Configuration configuration)
+        {
+            var logMessage = new Common.Models.LogMessage
             {
                 ApplicationKey = configuration.ApplicationKey,
                 Command = Common.Models.Commands.Start,
@@ -40,7 +66,7 @@ namespace Timelog.Tests
                 logMessage.Domain = $"{i}";
 
 
-                Timelog.Client.ClientLogger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
+                Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
                 
                 i++;
                 
@@ -55,7 +81,7 @@ namespace Timelog.Tests
                 {
                     logMessage.Domain = $"{input}";
 
-                    Timelog.Client.ClientLogger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
+                    Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
                 }
             } while (input != "exit");
         }

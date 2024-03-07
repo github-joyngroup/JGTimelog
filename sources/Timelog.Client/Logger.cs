@@ -7,7 +7,7 @@ using Timelog.Common.Models;
 
 namespace Timelog.Client
 {
-    public static class ClientLogger
+    public static class Logger
     {
         private static UdpClient udpClient;
         private static ILogger _logger;
@@ -15,9 +15,9 @@ namespace Timelog.Client
         private static bool isInitialized = false;
 
         public static Configuration GetClientConfiguration()
-{
-    return ClientConfiguration;
-}
+        {
+            return ClientConfiguration;
+        }
 
 
         // Initialization constructor
