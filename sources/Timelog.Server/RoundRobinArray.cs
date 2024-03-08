@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Timelog.Server
 {
-    internal class RoundRobinArray<T> where T : struct
+    public class RoundRobinArray<T> where T : struct
     {
         private readonly T[] _array;
         private readonly int _limit;
@@ -79,6 +79,14 @@ namespace Timelog.Server
             finally
             {
                 _lock.ExitReadLock();
+            }
+        }
+
+        public T this[int index]
+        {
+            get
+            {
+               return _array[index];
             }
         }
     }

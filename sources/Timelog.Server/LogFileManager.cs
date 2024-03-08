@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Timelog.Common;
 using Timelog.Common.Models;
+using Timelog.Server.Search;
 
 namespace Timelog.Server
 {
@@ -133,6 +134,8 @@ namespace Timelog.Server
             }
                 
         }
+
+        
 
         private bool RoundRobinFileEntries()
         {

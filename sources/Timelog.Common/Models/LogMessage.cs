@@ -19,9 +19,9 @@ namespace Timelog.Common.Models
     {
         public Guid ApplicationKey;
 
-        public string Domain;
+        public byte[] Domain;
         
-        public string LogLevelClient;
+        public int LogLevelClient;
         
         public string TagClient;
 
