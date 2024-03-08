@@ -13,6 +13,7 @@ using Timelog.Common.Models;
 using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Timelog.Server.Search;
 
 namespace Timelog.Server
 {
@@ -29,7 +30,7 @@ namespace Timelog.Server
         private static DateTime? LastTimeDumpedtofile = DateTime.UtcNow;
         private static bool ForceFlushToDisk = false;
         
-        internal static RoundRobinArray<LogMessage>? ReceivedDataQueue;
+        public static RoundRobinArray<LogMessage>? ReceivedDataQueue;
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -110,6 +111,7 @@ namespace Timelog.Server
         public static void Listening(CancellationToken cancellationToken)
         {
             Console.WriteLine($"Timelog.Server is listening on port UDP:{ServerConfiguration.TimelogServerPort}.");
+            //StreamWriter _streamWriter = new StreamWriter("C:\\TEMP\\TimelogFiltered\\Timelog_filtered.txt");
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -122,7 +124,8 @@ namespace Timelog.Server
 
                     //Deserialize the received data
                     var receivedLogMessage = ByteSerializer<LogMessage>.Deserialize(receivedData);
-                    
+                    //var receivedLogMessage = BinaronSerializer<LogMessage>.Deserialize(receivedData);
+
                     //Stamp the received data with current UTC time
                     receivedLogMessage.TimeServerTimeStamp = DateTime.UtcNow;
 
@@ -131,12 +134,16 @@ namespace Timelog.Server
                     {
                         //Add the received data to the queue
                         ReceivedDataQueue?.Add(receivedLogMessage);
-                        if (ReceivedDataQueue.CurrentIndex-1>= LastIndexDumpedtofile+ServerConfiguration.FlushItensSize || ForceFlushToDisk)
+                        int auxCidx = ReceivedDataQueue.CurrentIndex - 1;
+                        //LogMessageSearch.DumpSearched(auxCidx, _streamWriter);
+                        
+                        if (auxCidx >= LastIndexDumpedtofile+ServerConfiguration.FlushItensSize || ForceFlushToDisk)
                         {
                             ForceFlushToDisk = false;
                             int auxLidf = LastIndexDumpedtofile;
-                            int auxCidx = ReceivedDataQueue.CurrentIndex-1;
+                            //int auxCidx = ReceivedDataQueue.CurrentIndex-1;
                             Task.Run(() => logFileManager?.DumpFilesPeriodically(auxCidx, auxLidf));
+                            
                             LastIndexDumpedtofile = ReceivedDataQueue.CurrentIndex;
                             LastTimeDumpedtofile = receivedLogMessage.TimeServerTimeStamp;
                             ForceFlushToDisk = false;

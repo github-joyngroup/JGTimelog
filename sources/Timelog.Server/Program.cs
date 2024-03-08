@@ -21,6 +21,7 @@ namespace Timelog.Server
         {
             var configuration = hostContext.Configuration.GetSection("TimeLogServer").Get<Configuration>();
             Timelog.Server.Listener.Startup(configuration);
+
             services.AddHostedService<Timelog.Server.Listener>();
         }
 
@@ -30,13 +31,14 @@ namespace Timelog.Server
             {
                 config.AddJsonFile("appsettings.json", optional: true);
                 config.AddEnvironmentVariables();
-                
+
                 AfterConfigureConfiguration?.Invoke();
             })
             .ConfigureLogging((hostingContext, config) =>
             {
                 config.AddConsole();
                 config.SetMinimumLevel(LogLevel.Debug);
+
 
                 AfterConfigureLogging?.Invoke();
             })

@@ -25,7 +25,7 @@ namespace Timelog.Tests
             {
                 ApplicationKey = configuration.ApplicationKey,
                 Command = Common.Models.Commands.Start,
-                Domain = "aaa",
+                Domain = Encoding.UTF8.GetBytes($"1234"),
                 TransactionID = Guid.NewGuid(),
                 OriginTimestamp = DateTime.UtcNow,
                 Message = new Common.Models.Message { Header = $"", Data = Encoding.UTF8.GetBytes($"") },
@@ -39,9 +39,11 @@ namespace Timelog.Tests
             {
                 //convert the integer to binary and send it as the domain
                 //logMessage.Domain = $"{Convert.ToString(i,2)}";
-                logMessage.Domain = $"{i}";
-                if(i % 5000 == 0)
+                logMessage.Domain = Encoding.UTF8.GetBytes($"{i}");
+                logMessage.ApplicationKey = Guid.Parse("8ce94d5e-b2a3-4685-9e6c-ab21410b595f");
+                if (i % 15000 == 0)
                 {
+                    logMessage.ApplicationKey = Guid.Parse("43e719fd-62bc-441f-80ba-cbb2a92ba44c");
                     Console.WriteLine($"Logging message {i}");
                 }
                 Timelog.Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
