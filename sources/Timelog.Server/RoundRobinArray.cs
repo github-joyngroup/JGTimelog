@@ -12,7 +12,33 @@ namespace Timelog.Server
         private readonly int _limit;
         private int _index = 0;
         private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
-
+        private int _roundRobinCounter = 0;
+        
+        /// <summary>
+        /// The current index of the array
+        /// </summary>
+        public int CurrentIndex
+        {
+            get
+            {
+                _lock.EnterReadLock();
+                try { return _index; }
+                finally { _lock.ExitReadLock(); }
+            }
+        }
+        
+        /// <summary>
+        /// The current round robin counter, meaning how many times the array has been filled
+        /// </summary>
+        public int RoundRobinCounter
+        {
+            get
+            {
+                _lock.EnterReadLock();
+                try { return _roundRobinCounter; }
+                finally { _lock.ExitReadLock(); }
+            }
+        }
 
         public RoundRobinArray(int limit)
         {
@@ -27,6 +53,13 @@ namespace Timelog.Server
             {
                 _array[_index] = item;
                 _index = (_index + 1) % _limit;
+                
+                //increment the round robin counter each time we reach the limit
+                if (_index == 0)
+                {
+                    _roundRobinCounter++;
+                }
+
             }
             finally
             {

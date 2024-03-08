@@ -25,24 +25,28 @@ namespace Timelog.Tests
             {
                 ApplicationKey = configuration.ApplicationKey,
                 Command = Common.Models.Commands.Start,
-                Domain = "",
+                Domain = "aaa",
                 TransactionID = Guid.NewGuid(),
                 OriginTimestamp = DateTime.UtcNow,
                 Message = new Common.Models.Message { Header = $"", Data = Encoding.UTF8.GetBytes($"") },
             };
 
-            const int MAX = 10000;
+            const int MAX = 10000000;
             
             Console.WriteLine($"Start logging {MAX} messages");
             int i = 0;
-            while (i < MAX)
+            while (true)
             {
                 //convert the integer to binary and send it as the domain
                 //logMessage.Domain = $"{Convert.ToString(i,2)}";
                 logMessage.Domain = $"{i}";
-
+                if(i % 5000 == 0)
+                {
+                    Console.WriteLine($"Logging message {i}");
+                }
                 Timelog.Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
-                
+                //Timelog.Client.Logger.Log3();
+
                 i++;
                 //Thread.Sleep(10);
             }

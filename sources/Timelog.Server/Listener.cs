@@ -23,48 +23,21 @@ namespace Timelog.Server
         private static UdpClient? udpServer;
         private static List<Guid>? acceptedApplicationKeys;
         private static IPEndPoint? clientEndPoint;
-        private static QueueManager? queueManager;
         private static LogFileManager? logFileManager;
-        private static RoundRobinArray<LogMessage>? receivedDataQueue;
         private static CancellationTokenSource _stoppingSource;
+        private static int LastIndexDumpedtofile = 0;
+        private static DateTime? LastTimeDumpedtofile = DateTime.UtcNow;
+        private static bool ForceFlushToDisk = false;
+        
+        internal static RoundRobinArray<LogMessage>? ReceivedDataQueue;
 
-        //        static void Main(string[] args)
-        //        {
-        //#warning This is a temporary main method to test the Listener class. TODO: Load the configuration from a file.
-        //            var configuration = new Configuration
-        //            {
-        //                AuthorizedAppKeys = new List<Guid>
-        //                {
-        //                    Guid.Parse("8ce94d5e-b2a3-4685-9e6c-ab21410b595f"),
-        //                },
-        //            };
-
-        //            Startup(configuration, null);
-
-
-        //            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-
-        //            var t = new Thread(() => Listening(null, cancellationTokenSource.Token));
-        //                t.Start();
-
-        //            Thread.Sleep(25000);
-
-
-        //            //Listening(queueManager.LogHandler, new System.Threading.CancellationToken());
-        //            //Listening(null, new System.Threading.CancellationToken());
-
-        //            //Dump the receivedDataQueue to the log file
-        //            logFileManager?.DumpToFile(0, receivedDataQueue.GetItems());
-        //            //logFileManager?.DumpToFileBinary(0, receivedDataQueue.GetItems());
-        //        }
-
-      
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _stoppingSource = new CancellationTokenSource();
             
-            new Thread(() => Listening(null, _stoppingSource.Token)).Start();
-
+            //Start listening to the UDP port
+            new Thread(() => Listening(_stoppingSource.Token)).Start();
+            new Thread(() => FlushToDiskTimer()).Start();
             return Task.CompletedTask;
         }
 
@@ -73,9 +46,12 @@ namespace Timelog.Server
             _stoppingSource.Cancel();
             await Task.Run(() =>
             {
-                Console.WriteLine($"Timelog.Server is being stopped...");
+                Console.WriteLine($"Timelog.Server is being stopped of listening on port UDP:{ServerConfiguration.TimelogServerPort}.");
                 udpServer?.Close();
-                logFileManager?.DumpToFile(0, receivedDataQueue.GetItems());
+                
+                //Dump the last received data to the log file
+                logFileManager?.DumpFilesPeriodically(ReceivedDataQueue.CurrentIndex, LastIndexDumpedtofile);
+                logFileManager?.Close();
 
             }, CancellationToken.None);
 
@@ -88,7 +64,7 @@ namespace Timelog.Server
         /// <param name="configuration"></param>
         /// <param name="logger"></param>
         /// <param name="cancellationToken"></param>
-        public static async void Startup(Configuration configuration)
+        public static void Startup(Configuration configuration)
         {
             ServerConfiguration = configuration;
             //_logger = logger;
@@ -97,17 +73,14 @@ namespace Timelog.Server
 
             //initialize the queue manager to handle the received data
             //queueManager = new QueueManager(configuration.InternalCacheMaxEntries);
-            receivedDataQueue = new RoundRobinArray<LogMessage>(configuration.InternalCacheMaxEntries);
+            ReceivedDataQueue = new RoundRobinArray<LogMessage>(configuration.InternalCacheMaxEntries);
 
             //initialize the log file manager to handle the log files
-            logFileManager = new LogFileManager(configuration.LogFilesPath, configuration.MaxLogFiles, configuration.MaxLogFileEntries);
+            logFileManager = new LogFileManager(ReceivedDataQueue, configuration.LogFilesPath, configuration.MaxLogFiles, configuration.MaxLogFileEntries);
 
+            //initialize the UDP server
             udpServer = new UdpClient(configuration.TimelogServerPort);
             clientEndPoint = new IPEndPoint(IPAddress.Any, ServerConfiguration.TimelogServerPort);
-
-            Console.WriteLine($"Timelog.Server is listening on port {configuration.TimelogServerPort}.");
-
-            ////new Thread(() => Listening(queueManager.LogHandler, cancellationToken)).Start();
             
         }
 
@@ -134,8 +107,10 @@ namespace Timelog.Server
         /// <param name="logHandler">Handler to work the received LogMessage</param>
         /// <param name="cancellationToken">Cancellation token to cancel the reception of data</param>
         /// <returns></returns>
-        public static void Listening(Action<LogMessage> logHandler, CancellationToken cancellationToken)
+        public static void Listening(CancellationToken cancellationToken)
         {
+            Console.WriteLine($"Timelog.Server is listening on port UDP:{ServerConfiguration.TimelogServerPort}.");
+
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
@@ -151,13 +126,27 @@ namespace Timelog.Server
                     //Stamp the received data with current UTC time
                     receivedLogMessage.TimeServerTimeStamp = DateTime.UtcNow;
 
-                    //Check if the application key is authorized, and if so, handle the received data
+                    //Check if the application key is authorized
                     if (IsAuthorized(receivedLogMessage.ApplicationKey))
                     {
-                        receivedDataQueue?.Add(receivedLogMessage);
-                        //logHandler(receivedLogMessage);
+                        //Add the received data to the queue
+                        ReceivedDataQueue?.Add(receivedLogMessage);
+                        if (ReceivedDataQueue.CurrentIndex-1>= LastIndexDumpedtofile+ServerConfiguration.FlushItensSize || ForceFlushToDisk)
+                        {
+                            ForceFlushToDisk = false;
+                            int auxLidf = LastIndexDumpedtofile;
+                            int auxCidx = ReceivedDataQueue.CurrentIndex-1;
+                            Task.Run(() => logFileManager?.DumpFilesPeriodically(auxCidx, auxLidf));
+                            LastIndexDumpedtofile = ReceivedDataQueue.CurrentIndex;
+                            LastTimeDumpedtofile = receivedLogMessage.TimeServerTimeStamp;
+                            ForceFlushToDisk = false;
+                        }
                     }
-
+                    if(ReceivedDataQueue.CurrentIndex % 1500 == 0)
+                    {
+                        "".ToString();
+                        Console.WriteLine($"CurrentIndex: {ReceivedDataQueue.CurrentIndex}");
+                    }
                     //Console.WriteLine($"{i} --> {System.Text.Json.JsonSerializer.Serialize(receivedLogMessage)[..100]}...");
                 }
                 catch (Exception e)
@@ -181,6 +170,18 @@ namespace Timelog.Server
             return acceptedApplicationKeys is not null && acceptedApplicationKeys.Contains(clientAppKey);
         }
 
+        private static void FlushToDiskTimer()
+        {
+            while (true)
+            {
+                Thread.Sleep(ServerConfiguration.FlushTimeSeconds * 1000);
+                if(DateTime.UtcNow - LastTimeDumpedtofile > TimeSpan.FromSeconds(ServerConfiguration.FlushTimeSeconds))
+                {
+                    ForceFlushToDisk = true;
+                }
+                
+            }
+        }
     }
         
 }
