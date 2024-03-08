@@ -33,7 +33,7 @@ namespace Timelog.Tests
                 .AddJsonFile(file);
 
             IConfigurationRoot configRoot = configurationBuilder.Build();
-            configRoot.Bind(configuration);
+            configRoot.GetSection("TimelogTestClientService").Bind(configuration);
 
             // Add additional validation if needed
 
