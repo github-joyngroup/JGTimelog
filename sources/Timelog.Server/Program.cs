@@ -12,7 +12,7 @@ namespace Timelog.Server
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        static async Task Main2(string[] args)
         {
             CreateHostBuilder(args, null, null, WireUpWorker).Build().Run();
         }
