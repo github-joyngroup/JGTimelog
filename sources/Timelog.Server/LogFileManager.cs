@@ -30,7 +30,12 @@ namespace Timelog.Server
 
         public LogFileManager(RoundRobinArray<LogMessage>? receivedDataQueue, string logFilesPath, int maxFiles, int maxEntriesPerFile)
         {
-            if(!Directory.Exists(logFilesPath)) { throw new DirectoryNotFoundException($"The directory '{logFilesPath}' does not exist.");}
+            if(!Directory.Exists(logFilesPath)) 
+            {
+                //EPocas, 2024-03-11, create directory if it does not exist
+                Directory.CreateDirectory(logFilesPath);
+                //throw new DirectoryNotFoundException($"The directory '{logFilesPath}' does not exist.");
+            }
 
             _logFilesPath = logFilesPath;
             _maxFiles = maxFiles;
@@ -76,10 +81,12 @@ namespace Timelog.Server
             _writer = OpenStreamWriter(fileChanged);
         }
 
+        /// <summary>
+        /// Find the last written file in the directory
+        /// and get the file with most recent date
+        /// </summary>
         private FileInfo GetLastFilePath(string fileDirectoryPath)
         {
-            //Find the last written file in the directory
-            // and get the file with most recent date
             var directory = new DirectoryInfo(fileDirectoryPath);
             var files = directory.GetFiles();
             
@@ -107,12 +114,30 @@ namespace Timelog.Server
             currentFileIndex = (currentFileIndex+1) % _maxFiles;
         }
 
+        /// <summary>
+        /// Read the file and count the number of lines, returns zero (0) if file does not exist
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
         private int GetEntriesDumpedToFiles(FileInfo file)
         {
-            //Read the file and count the number of lines
+            if(File.Exists(file.FullName) == false) { return 0; }
             return File.ReadLines(file.FullName).Count();
             
         }
+
+        
+        /// <summary>
+        /// This method is used to dump log files periodically.
+        /// It takes the current index and the last index dumped to file as parameters.
+        /// It calculates the fromIndex by taking the modulus of lastIndexDumpedtofile and the length of ReceivedDataQueue items.
+        /// If the currentIndex is greater than or equal to fromIndex, it means we are still in the same round robin cycle.
+        /// In this case, it dumps the new entries to the log file from fromIndex to currentIndex.
+        /// If the currentIndex is less than fromIndex, it means we are in the next round robin cycle.
+        /// In this case, it dumps the new entries to the log file from fromIndex to the end and from the start to currentIndex.
+        /// </summary>
+        /// <param name="currentIndex">The current index in the round robin cycle.</param>
+        /// <param name="lastIndexDumpedtofile">The last index that was dumped to the file.</param>
         public void DumpFilesPeriodically(int currentIndex, int lastIndexDumpedtofile)
         {
             int fromIndex = lastIndexDumpedtofile++ % ReceivedDataQueue.GetItems().Length;
@@ -127,12 +152,11 @@ namespace Timelog.Server
             else if (currentIndex < fromIndex)
             {
                 // we are in the round robin cycle
-                
+
                 //dump the new  entries to the log file
                 DumpToFile(ReceivedDataQueue.GetItems().Where(e => e.ApplicationKey != Guid.Empty).ToArray()[fromIndex..]);
                 DumpToFile(ReceivedDataQueue.GetItems().Where(e => e.ApplicationKey != Guid.Empty).ToArray()[0..currentIndex]);
             }
-                
         }
 
         
