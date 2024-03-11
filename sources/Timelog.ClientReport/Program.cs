@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Timelog.Common.Models;
 
 namespace Timelog.ClientReport
 {
@@ -16,7 +17,7 @@ namespace Timelog.ClientReport
             try
             {
                 var configuration = ReadConfiguration("appsettings.json", Directory.GetCurrentDirectory());
-                InitializeApplication(configuration);
+                InitializeApplication();
                 RunApplication(configuration);
             }
             catch (Exception ex)
@@ -40,52 +41,44 @@ namespace Timelog.ClientReport
             return configuration;
         }
 
-        private static void InitializeApplication(Configuration configuration)
+        private static async void InitializeApplication()
         {
-            ClientReportLogger.Init(configuration, null);
-            // Other initialization logic if needed
+            // Initialize the SignalR connection
+            await ClientReportLogger.Init("http://localhost:5000/logMessageHub", null); // Replace with the URL of your SignalR hub
         }
 
-        private static void RunApplication(Configuration configuration)
+        private static async void RunApplication(Configuration configuration)
         {
-            var logMessage = new Common.Models.LogMessage
+            try
             {
-                ApplicationKey = ClientReportLogger.ClientConfiguration.ApplicationKey,
-                Command = Common.Models.Commands.Start,
-                Domain = "",
-                TransactionID = Guid.NewGuid(),
-                Message = new Common.Models.Message { Header = $"", Data = Encoding.UTF8.GetBytes($"") },
-                LogLevelClient = Microsoft.Extensions.Logging.LogLevel.Trace
-            };
-
-            const int MAX = 1;
-
-            Console.WriteLine($"Start logging {MAX} messages");
-            int i = 0;
-
-            while (i < MAX)
-            {
-                logMessage.Domain = $"{i}";
-
-
-                ClientReportLogger.Log(logMessage);
-
-                i++;
-
-            }
-
-            Console.WriteLine("Enter a message to log (press Enter to log, type 'exit' to exit):");
-            string input;
-            do
-            {
-                input = Console.ReadLine();
-                if (input != "exit")
+                // Create and send log messages
+                var logMessage = new LogMessage
                 {
-                    logMessage.Domain = $"{input}";
+                    ApplicationKey = configuration.ApplicationKey,
+                    Command = Commands.Start,
+                    TransactionID = Guid.NewGuid(),
+                    Message = new Message { Header = $"", Data = Encoding.UTF8.GetBytes($"") },
+                };
 
-                    ClientReportLogger.Log(logMessage);
+                const int MAX = 10000;
+
+                int i = 0;
+                while (i < MAX)
+                {
+                    logMessage.Domain = $"{i}";
+
+                    // Send log message
+                    await ClientReportLogger.Log(logMessage);
+
+                    i++;
                 }
-            } while (input != "exit");
+
+                // Other application logic
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during application initialization: {ex.Message}");
+            }
         }
     }
 }

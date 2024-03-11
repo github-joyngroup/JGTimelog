@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
 using System.Net.Sockets;
@@ -10,67 +11,60 @@ namespace Timelog.ClientReport
 {
     public static class ClientReportLogger
     {
-        private static TcpClient tcpClient;
+        private static HubConnection _hubConnection;
         private static ILogger _logger;
-        internal static Configuration ClientConfiguration;
         private static bool isInitialized = false;
 
-        public static Configuration GetClientConfiguration()
+        public static async Task Init(string hubUrl, ILogger logger)
         {
-            return ClientConfiguration;
-        }
-
-        // Initialization constructor
-        public static void Init(Configuration configuration, ILogger logger)
-        {
-            // Ensure that Init can only be called once
-            if (tcpClient != null || isInitialized)
+            if (isInitialized)
             {
                 throw new InvalidOperationException("Logger has already been initialized.");
             }
 
-            ClientConfiguration = configuration;
             _logger = logger;
 
-            // Instantiate tcpClient here to ensure proper initialization
-            tcpClient = new TcpClient();
+            _hubConnection = new HubConnectionBuilder()
+                .WithAutomaticReconnect() // Enable automatic reconnection
+                .Build();
+
+            _hubConnection.On<string>("ReceiveLogMessage", (logMessage) =>
+            {
+                // Process the received log message
+                // You can add your logic to handle the log message here
+            });
+
+            _hubConnection.Closed += async (error) =>
+            {
+                // Handle reconnection if the connection is closed
+                await Task.Delay(new Random().Next(0, 5) * 1000);
+                await _hubConnection.StartAsync();
+            };
 
             try
             {
-                tcpClient.Connect(configuration.TimelogServerHost, configuration.TimelogServerPort);
-                _logger?.LogInformation($"Timelog.ClientReport '{configuration.ApplicationKey.ToString()[..4]}...' is ready to log to the server {configuration.TimelogServerHost}:{configuration.TimelogServerPort}.");
-
+                await _hubConnection.StartAsync();
+                _logger?.LogInformation("ClientReportLogger is connected to the SignalR hub.");
                 isInitialized = true;
             }
             catch (Exception ex)
             {
-                _logger?.LogError($"Error connecting to the server: {ex.Message}");
+                _logger?.LogError($"Error connecting to the SignalR hub: {ex.Message}");
                 throw;
             }
         }
 
-        // Existing Log method
-        public static void Log(LogMessage message)
+        public static async Task Log(LogMessage message)
         {
-            if (((int)message.LogLevelClient) >= (int)ClientConfiguration.LogLevel)
+            string logString = JsonConvert.SerializeObject(message);
+
+            try
             {
-                string logString = JsonConvert.SerializeObject(message);
-
-                try
-                {
-                    if (ClientConfiguration.UseClientTimestamp)
-                    {
-                        message.OriginTimestamp = DateTime.UtcNow;
-                    }
-
-                    byte[] data = Encoding.UTF8.GetBytes(logString);
-                    tcpClient.GetStream().Write(data, 0, data.Length);
-                }
-                catch (Exception ex)
-                {
-                    // Handle exception (log or rethrow)
-                    _logger?.LogError($"Error sending log message to server: {ex.Message}");
-                }
+                await _hubConnection.SendAsync("SendLogMessage", logString);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError($"Error sending log message to SignalR hub: {ex.Message}");
             }
         }
     }
