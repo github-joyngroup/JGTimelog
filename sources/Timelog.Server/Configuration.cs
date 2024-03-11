@@ -18,7 +18,7 @@ namespace Timelog.Server
         /// <summary>
         /// The Timelog server network port number, that will be open to receive the logs sent by the client. Default is 7777.
         /// </summary>
-        public int TimelogServerPort { get; set; } = 7777;
+        public int TimelogServerPort { get; set; } = 7776;
 
         /// <summary>
         /// The number of entries to be accepted on the global internal cache. Default is 1000000.

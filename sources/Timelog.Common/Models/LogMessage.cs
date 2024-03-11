@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,8 +16,10 @@ namespace Timelog.Common.Models
     }
 
     [Serializable]
+    
     public struct LogMessage
     {
+        
         public Guid ApplicationKey;
 
         public byte[] Domain;
