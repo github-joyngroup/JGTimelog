@@ -51,24 +51,30 @@ namespace Timelog.Tests
             {
                 ApplicationKey = configuration.ApplicationKey,
                 Command = Common.Models.Commands.Start,
-                Domain = "",
+                Domain = Encoding.UTF8.GetBytes($"1234"),
                 TransactionID = Guid.NewGuid(),
                 OriginTimestamp = DateTime.UtcNow,
                 Message = new Common.Models.Message { Header = $"", Data = Encoding.UTF8.GetBytes($"") },
             };
 
-            const int MAX = 10000;
+            const int MAX = 10000000;
             
             Console.WriteLine($"Start logging {MAX} messages");
             int i = 0;
-            while (i < MAX)
+            while (true)
             {
                 //convert the integer to binary and send it as the domain
                 //logMessage.Domain = $"{Convert.ToString(i,2)}";
-                logMessage.Domain = $"{i}";
+                logMessage.Domain = Encoding.UTF8.GetBytes($"{i}");
+                logMessage.ApplicationKey = Guid.Parse("8ce94d5e-b2a3-4685-9e6c-ab21410b595f");
+                if (i % 15000 == 0)
+                {
+                    logMessage.ApplicationKey = Guid.Parse("43e719fd-62bc-441f-80ba-cbb2a92ba44c");
+                    Console.WriteLine($"Logging message {i}");
+                }
+                Timelog.Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
+                //Timelog.Client.Logger.Log3();
 
-                Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
-                
                 i++;
                 //Thread.Sleep(10);
             }

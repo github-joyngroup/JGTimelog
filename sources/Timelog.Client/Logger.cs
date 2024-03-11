@@ -11,10 +11,8 @@ namespace Timelog.Client
     {
         private static UdpClient udpClient;
         private static ILogger _logger;
-        internal static Configuration ClientConfiguration;
-        private static bool isInitialized = false;
-
-        public static Configuration GetClientConfiguration()
+        private static Configuration ClientConfiguration;
+        public static void Startup(Configuration configuration, ILogger logger)
         {
             return ClientConfiguration;
         }
@@ -34,10 +32,9 @@ namespace Timelog.Client
 
             // Instantiate udpClient here to ensure proper initialization
             udpClient = new UdpClient();
+            udpClient.Connect(ClientConfiguration.TimelogServerHost, ClientConfiguration.TimelogServerPort);
 
-            _logger?.LogInformation($"Timelog.Client '{configuration.ApplicationKey.ToString()[..4]}...' is ready to log to the server {configuration.TimelogServerHost}:{configuration.TimelogServerPort}.");
-
-            isInitialized = true;
+            _logger?.LogInformation($"Timelog.Client '{ClientConfiguration.ApplicationKey.ToString()[..4]}...' is ready to log to the server {configuration.TimelogServerHost}:{configuration.TimelogServerPort}.");
         }
 
         // Existing Log method
@@ -46,24 +43,12 @@ namespace Timelog.Client
             
             if (((int)message.LogLevelClient) >= (int)ClientConfiguration.LogLevel)  //&& message != null)
             {
-                byte[] logBytes = ByteSerializer<LogMessage>.Serialize(message);
+                udpClient.Send(logBytes, logBytes.Length);
 
-                try
-                {
-                    if (ClientConfiguration.UseClientTimestamp)
-                    {
-                        message.OriginTimestamp = DateTime.UtcNow;
-                    }
-
-                    udpClient.Send(logBytes, logBytes.Length, ClientConfiguration.TimelogServerHost, ClientConfiguration.TimelogServerPort);
-
-
-                }
-                catch
-                {
-                    // Handle exception (log or rethrow)
-                    _logger?.LogError("Error sending log message to server.");
-                }
+                //if(logBytes.Length > 1500)
+                //{
+                //    _logger?.LogWarning($"Timelog.Client '{ClientConfiguration.ApplicationKey.ToString()[..4]}...' sent a log message that is larger than 1500 bytes. This may cause fragmentation and performance issues.");
+                //}
             }
 			
            

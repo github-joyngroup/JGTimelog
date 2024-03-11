@@ -14,49 +14,14 @@ namespace Timelog.Server
     {
         static async Task Main2(string[] args)
         {
-            //CreateHostBuilder(args, null, null, WireUpWorker).Build().Run();
-            //var builder = Host.CreateDefaultBuilder(args);
-            //builder.ConfigureAppConfiguration((hostContext, config) =>
-            //{
-            //    config.AddJsonFile("appsettings.json", optional: false);
-            //});
-
-            //builder.ConfigureServices((hostContext, services) =>
-            //{
-            //    services.AddLogging(logging =>
-            //    {
-            //        logging.ClearProviders();
-            //        logging.AddConsole();
-            //    });
-
-            //    services.AddHostedService<Timelog.Server.Listener>();
-            //});
-
-            //var host = builder.Build();
-
-            ////get console logger
-            ////var logger = host.Services.GetService(typeof(ILogger<Program>)) as ILogger<Program>;
-            
-            //// Access the IConfiguration service from the host
-            //var configuration = host.Services.GetService(typeof(IConfiguration)) as IConfiguration;
-
-            //// Get the TimeLogServer section from appsettings configuration
-            //var timeLogServerConfig = configuration.GetSection("TimeLogServer").Get<Configuration>();
-
-
-            //// Start Timelog server
-            //Timelog.Server.Listener.Startup(timeLogServerConfig);
-
-            //// Started up
-            //await host.RunAsync();
-
-
+            CreateHostBuilder(args, null, null, WireUpWorker).Build().Run();
         }
 
         private static void WireUpWorker(HostBuilderContext hostContext, IServiceCollection services)
         {
             var configuration = hostContext.Configuration.GetSection("TimeLogServer").Get<Configuration>();
             Timelog.Server.Listener.Startup(configuration);
+
             services.AddHostedService<Timelog.Server.Listener>();
         }
 
@@ -66,13 +31,14 @@ namespace Timelog.Server
             {
                 config.AddJsonFile("appsettings.json", optional: true);
                 config.AddEnvironmentVariables();
-                
+
                 AfterConfigureConfiguration?.Invoke();
             })
             .ConfigureLogging((hostingContext, config) =>
             {
                 config.AddConsole();
                 config.SetMinimumLevel(LogLevel.Debug);
+
 
                 AfterConfigureLogging?.Invoke();
             })
