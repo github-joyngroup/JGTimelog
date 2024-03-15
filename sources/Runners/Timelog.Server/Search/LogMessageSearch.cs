@@ -19,7 +19,7 @@ namespace Timelog.Server.Search
 
         public static bool FilterMessagebyCriteria(int queueIndex)
         {
-            var msg = Listener.ReceivedDataQueue[queueIndex];
+            var msg = UDPListener.ReceivedDataQueue[queueIndex];
 
             if (SearchCriteria.ViewerGuid.HasValue && msg.ApplicationKey != SearchCriteria.ViewerGuid)
             {
@@ -88,7 +88,7 @@ namespace Timelog.Server.Search
         {
             if(FilterMessagebyCriteria(currentIndex))
             {
-                var line = System.Text.Json.JsonSerializer.Serialize(Listener.ReceivedDataQueue[currentIndex], options);
+                var line = System.Text.Json.JsonSerializer.Serialize(UDPListener.ReceivedDataQueue[currentIndex], options);
                 streamWriter.WriteLine(line);
             }
 

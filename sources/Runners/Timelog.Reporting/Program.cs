@@ -27,7 +27,7 @@ builder.ConfigureServices((hostContext, services) =>
         logging.AddFile(options => { hostContext.Configuration.GetSection("Logging:File").Bind(options); }); //Requires nuget NetEscapades.Extensions.Logging.RollingFile
     });
 
-    services.AddHostedService<Timelog.Reporting.ReportingServer>();
+    services.AddHostedService<Timelog.Reporting.LogServerClient>();
     services.AddHostedService<Timelog.Reporting.ViewerServer>();
 });
 
@@ -38,8 +38,11 @@ var configuration = host.Services.GetRequiredService<IConfiguration>();
 
 logger.LogInformation("Starting... ");
 
-var reportingServerConfiguration = configuration.GetSection("ReportingServer").Get<ReportingServerConfiguration>();
-Timelog.Reporting.ReportingServer.Startup(reportingServerConfiguration, logger);
+var applicationKey = configuration.GetValue<Guid>("ApplicationKey");
+ViewerFiltersHandler.Startup(applicationKey, logger);
+
+var logServerClientConfiguration = configuration.GetSection("LogServerClient").Get<LogServerClientConfiguration>();
+Timelog.Reporting.LogServerClient.Startup(applicationKey, logServerClientConfiguration, logger);
 
 var viewerServerConfiguration = configuration.GetSection("ViewerServer").Get<ViewerServerConfiguration>();
 Timelog.Reporting.ViewerServer.Startup(viewerServerConfiguration, logger);
@@ -73,7 +76,7 @@ do
         Console.WriteLine("Listing filters:");
         foreach(var filter in Timelog.Reporting.ViewerFiltersHandler.ListFilters())
         {
-            Console.WriteLine($"{filter.ViewerGuid}: {filter.State.ToString()} - {filter.Hash}");
+            Console.WriteLine($"{filter.ViewerGuid}: {filter.State.ToString()} - {filter.TransactionID} - {filter.CommandMask} - {filter.DomainMask}");
         }
         Timelog.Reporting.ViewerFiltersHandler.ListFilters();
     }

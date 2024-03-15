@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Timelog.Server
+namespace Timelog.Common
 {
     public class RoundRobinArray<T> where T : struct
     {

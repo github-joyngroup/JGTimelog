@@ -83,12 +83,12 @@ namespace Timelog.Common.TCP
         {
             if (_configuration.AuthorizedAppKeys.Contains(e.Client.Guid))
             {
-                _logger?.LogInformation($"Timelog.Reporting.ViewerServer got a new connection from {e.Client.ToString()}.");
+                _logger?.LogInformation($"TCP Server '{_configuration.Name}' got a new connection from {e.Client.ToString()}.");
                 OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, e.Client.Guid, null);
             }
             else
             {
-                _logger?.LogInformation($"Timelog.Reporting.ViewerServer got a new connection from {e.Client.ToString()} but it's not authorized. Disconnecting...");
+                _logger?.LogInformation($"TCP Server '{_configuration.Name}' got a new connection from {e.Client.ToString()} but it's not authorized. Disconnecting...");
                 _server.DisconnectClientAsync(e.Client.Guid);
             }
         }
@@ -98,7 +98,7 @@ namespace Timelog.Common.TCP
         /// </summary>
         private void OnTcpClientDisconnected(object sender, DisconnectionEventArgs e)
         {
-            _logger?.LogInformation($"Timelog.Reporting.ViewerServer client {e.Client.ToString()}' disconnected with reason {e.Reason}.");
+            _logger?.LogInformation($"TCP Server '{_configuration.Name}' client {e.Client.ToString()}' disconnected with reason {e.Reason}.");
             OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Disconnect, e.Client.Guid, null);
         }
 
@@ -130,7 +130,7 @@ namespace Timelog.Common.TCP
                     OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, null);
                     break;
 
-                //Set Filter message, parse the filter and add it to the ViewerFilters Handler
+                //Set Filter message, parse the filter and bubble up to OnTimeLogTCPOperation
                 case TimelogTCPOperation.SetFilter:
                     _logger?.LogInformation($"{e.Client.ToString()} is setting it's filter");
                     var filterStr = Encoding.UTF8.GetString(e.Data);
@@ -141,7 +141,7 @@ namespace Timelog.Common.TCP
                     _logger?.LogDebug($"{e.Client.ToString()} set it's filter");
                     break;
 
-                //Get Filter message, get the filter from the ViewerFilters Handler and send it back to the client
+                //Get Filter message, bubble up to OnTimeLogTCPOperation
                 case TimelogTCPOperation.GetFilter:
                     _logger?.LogInformation($"{e.Client.ToString()} is requesting it's current filter");
                     OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, null);
@@ -188,12 +188,12 @@ namespace Timelog.Common.TCP
         public string Name { get; set; }
 
         /// <summary>
-        /// The host for viewers to connect
+        /// The host for clients to connect
         /// </summary>
         public string Host { get; set; }
 
         /// <summary>
-        /// The lisneting port for viewers to connect
+        /// The listening port for clients to connect
         /// </summary>
         public int Port { get; set; }
 
@@ -205,7 +205,7 @@ namespace Timelog.Common.TCP
         /// <summary>
         /// The list of authorized application keys
         /// </summary>
-        public List<Guid> AuthorizedAppKeys { get; set; }
+        public HashSet<Guid> AuthorizedAppKeys { get; set; }
 
         /// <summary>
         /// The amount of time in seconds that the server will wait for a client to send a message before disconnecting it

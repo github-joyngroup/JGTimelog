@@ -19,6 +19,10 @@ namespace Timelog.Common.TCP
     public class TCPClientWrapper
     {
         ///Private Properties 
+        
+        /// <summary>The unique application key to be used in the TCP communication</summary>
+        private static Guid _applicationKey { get; set; }
+
         /// <summary>The configuration for the Watson TCP Client</summary>
         private static WatsonTcpClientConfiguration _configuration;
 
@@ -40,8 +44,9 @@ namespace Timelog.Common.TCP
         /// <summary>
         /// Setup the TCP Client based on the configuration. Will setup the Server host and port, and wire up the several TCP events
         /// </summary>
-        public void Startup(WatsonTcpClientConfiguration configuration, ILogger logger, OnTimelogTCPOperationHandler onTimelogTCPOperation)
+        public void Startup(Guid applicationKey, WatsonTcpClientConfiguration configuration, ILogger logger, OnTimelogTCPOperationHandler onTimelogTCPOperation)
         {
+            _applicationKey = applicationKey;
             _configuration = configuration;
             _logger = logger;
 
@@ -50,7 +55,7 @@ namespace Timelog.Common.TCP
             _client.Events.ServerConnected += OnTcpServerConnected;
             _client.Events.ServerDisconnected += OnTcpServerDisconnected;
             _client.Events.MessageReceived += OnTcpServerMessageReceived;
-            _client.Settings.Guid = _configuration.ApplicationKey;
+            _client.Settings.Guid = _applicationKey;
 
             OnTimelogTCPOperation += onTimelogTCPOperation;
 
@@ -79,7 +84,7 @@ namespace Timelog.Common.TCP
                         }
                         catch (Exception ex)
                         {
-                            _logger?.LogInformation($"Timelog.Viewer '{_configuration.Name}...' Failed connection with message: {ex.Message}. Will retry");
+                            _logger?.LogInformation($"TTCP Client '{_configuration.Name}...' Failed connection with message: {ex.Message}. Will retry");
                             Task.Delay(_configuration.RetryConnectFrequency, stoppingToken).Wait();
                         }
                     }
@@ -112,7 +117,7 @@ namespace Timelog.Common.TCP
         private void OnTcpServerConnected(object sender, ConnectionEventArgs e)
         {
             _logger?.LogInformation($"TCP Client '{_configuration.Name}...' connected to {_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}.");
-            OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, _configuration.ApplicationKey, null);
+            OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, _applicationKey, null);
         }
 
         /// <summary>
@@ -120,8 +125,8 @@ namespace Timelog.Common.TCP
         /// </summary>
         private void OnTcpServerDisconnected(object sender, DisconnectionEventArgs e)
         {
-            _logger?.LogInformation($"Timelog.Viewer '{_configuration.Name}...' disconnected from {_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}.");
-            OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, _configuration.ApplicationKey, null);
+            _logger?.LogInformation($"TCP Client '{_configuration.Name}...' disconnected from {_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}.");
+            OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, _applicationKey, null);
         }
 
         /// <summary>
@@ -143,13 +148,13 @@ namespace Timelog.Common.TCP
                 //No operation, just log the message
                 case TimelogTCPOperation.None:
                     _logger?.LogInformation($"Nop message from server at '{_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}': '{Encoding.UTF8.GetString(e.Data)}'");
-                    OnTimelogTCPOperation?.Invoke(operation, _configuration.ApplicationKey, null);
+                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, null);
                     break;
 
                 //Ping operation, just log the message
                 case TimelogTCPOperation.Ping:
                     _logger?.LogInformation($"Ping message from server at '{_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}': '{Encoding.UTF8.GetString(e.Data)}'");
-                    OnTimelogTCPOperation?.Invoke(operation, _configuration.ApplicationKey, null);
+                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, null);
                     break;
 
                 //Current Filter parse the filter and log it
@@ -159,7 +164,7 @@ namespace Timelog.Common.TCP
                     var filter = System.Text.Json.JsonSerializer.Deserialize<FilterCriteria>(filterStr);
 
                     //Do anything with the filter?
-                    OnTimelogTCPOperation?.Invoke(operation, _configuration.ApplicationKey, new List<FilterCriteria>() { filter });
+                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, new List<FilterCriteria>() { filter });
                     break;
 
                 //Fallback scenario, log the message
@@ -211,11 +216,6 @@ namespace Timelog.Common.TCP
 
     public class WatsonTcpClientConfiguration
     {
-        /// <summary>
-        /// The unique identifier of the client application.
-        /// </summary>
-        public Guid ApplicationKey { get; set; }
-
         /// <summary>
         /// The TCP Client Name to be used in logs
         /// </summary>

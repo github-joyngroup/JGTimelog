@@ -70,22 +70,24 @@ namespace Timelog.Common.Models
         /// </summary>
         public DateTime? EndServerTimestamp { get; set; }
 
-        /// <summary>
-        /// Lazy loads the hash of the filter, all fields are accounted except for the Guid ones
-        /// </summary>
-        private string hash;
-        public string Hash
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(hash))
-                {
-                    var baseHash = $"{StateCode}|{DomainMask}|{MaxLogLevelClient}|{TransactionID}|{CommandMask}|{BeginServerTimestamp}|{EndServerTimestamp}";
-                    hash = DocDigitizer.Common.Security.Crypto.Hashing.MD5Hashing.SingletonMD5Hasher.Instance.Hash(baseHash);
-                }
-                return hash;
-            }
-        }
+        //EPocas - discontinued to remove dependency on DocDigitizer.Common
+        //If Hash became required, we can reaccess this field
+        ///// <summary>
+        ///// Lazy loads the hash of the filter, all fields are accounted except for the Guid ones
+        ///// </summary>
+        //private string hash;
+        //public string Hash
+        //{
+        //    get
+        //    {
+        //        if (string.IsNullOrWhiteSpace(hash))
+        //        {
+        //            var baseHash = $"{StateCode}|{DomainMask}|{MaxLogLevelClient}|{TransactionID}|{CommandMask}|{BeginServerTimestamp}|{EndServerTimestamp}";
+        //            hash = DocDigitizer.Common.Security.Crypto.Hashing.MD5Hashing.SingletonMD5Hasher.Instance.Hash(baseHash);
+        //        }
+        //        return hash;
+        //    }
+        //}
     }
 
     /// <summary>

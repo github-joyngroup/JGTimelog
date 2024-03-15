@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,6 +8,8 @@ using Timelog.Common.Models;
 
 namespace Timelog.Reporting
 {
+    internal delegate void ViewerFiltersChangedHandler(Dictionary<Guid, FilterCriteria> currentFilters);
+
     internal class ViewerFiltersHandler
     {
         /// <summary>
@@ -15,12 +18,30 @@ namespace Timelog.Reporting
         private static Dictionary<Guid, FilterCriteria> viewerFilterCriterias = new Dictionary<Guid, FilterCriteria>();
         private static ReaderWriterLockSlim viewerFilterCriteriasLock = new ReaderWriterLockSlim();
 
+        internal static event ViewerFiltersChangedHandler OnViewerFiltersChanged;
+
+        private static ILogger _logger;
+        private static Guid _applicationKey;
+
+        /// <summary>
+        /// Starts the ViewerFiltersHandler based on the configuration
+        /// </summary>
+        public static void Startup(Guid applicationKey, ILogger logger)
+        {
+            _applicationKey = applicationKey;
+            _logger = logger;
+        }
+
         /// <summary>
         /// Will add or update a filter to the viewer's filters
         /// </summary>
         public static void AddFilter(FilterCriteria filter)
         {
-            filter.ReportingServerGuid = ReportingServer.Configuration.AppKey;
+            if(_applicationKey == Guid.Empty)
+            {
+                _logger?.LogWarning("Misconfiguration of ViewerFiltersHandler, ApplicationKey is empty - Check if being correcly initialized in Program.");
+            }
+            filter.ReportingServerGuid = _applicationKey;
             viewerFilterCriteriasLock.EnterWriteLock();
             try
             {
@@ -30,6 +51,8 @@ namespace Timelog.Reporting
             {
                 viewerFilterCriteriasLock.ExitWriteLock();
             }
+
+            OnViewerFiltersChanged?.Invoke(viewerFilterCriterias);
         }
 
         /// <summary>
@@ -56,6 +79,8 @@ namespace Timelog.Reporting
             {
                 viewerFilterCriteriasLock.ExitWriteLock();
             }
+
+            OnViewerFiltersChanged?.Invoke(viewerFilterCriterias);
         }
 
         /// <summary>

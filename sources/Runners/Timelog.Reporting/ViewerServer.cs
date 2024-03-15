@@ -34,6 +34,26 @@ namespace Timelog.Reporting
         }
 
         /// <summary>
+        /// Starts the ViewerServer
+        /// </summary>
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            _logger?.LogInformation($"Timelog.Reporting.ViewerServer is starting...");
+            return Task.Run(() => _server.Start(), stoppingToken);
+        }
+
+        /// <summary>
+        /// Stops the ViewerServer
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public override async Task StopAsync(CancellationToken cancellationToken)
+        {
+            _logger?.LogInformation($"Timelog.Reporting.ViewerServer is stopping...");
+            await Task.Run(() => _server.Stop(), cancellationToken);
+        }
+
+        /// <summary>
         /// Handles a TCP operation. As the TCP communication is handled by the TCPServerWrapper this class shall only handle business logic
         /// </summary>
         private static void OnTimelogTCPOperation(TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters)
@@ -62,27 +82,6 @@ namespace Timelog.Reporting
                     break;
             }
         }
-
-        /// <summary>
-        /// Starts the ViewerServer
-        /// </summary>
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            _logger?.LogInformation($"Timelog.Reporting.ViewerServer is starting...");
-            return Task.Run(() => _server.Start(), stoppingToken);
-        }
-
-        /// <summary>
-        /// Stops the ViewerServer
-        /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public override async Task StopAsync(CancellationToken cancellationToken)
-        {
-            _logger?.LogInformation($"Timelog.Reporting.ViewerServer is stopping...");
-            await Task.Run(() => _server.Stop(), cancellationToken);
-        }
-
 
         public static void BroadcastMessage(string message)
         {

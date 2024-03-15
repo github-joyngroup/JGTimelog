@@ -7,50 +7,64 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Timelog.Server;
+using Timelog.Server.Viewers;
 
-namespace Timelog.Server
+var builder = Host.CreateDefaultBuilder(args);
+
+builder.ConfigureAppConfiguration((hostingContext, config) =>
 {
-    internal class Program
+    config.AddJsonFile("appsettings.json", optional: true);
+    config.AddEnvironmentVariables();
+});
+
+builder.ConfigureServices((hostContext, services) =>
+{
+    services.AddLogging(logging =>
     {
-        static async Task Main(string[] args)
-        {
-            CreateHostBuilder(args, null, null, WireUpWorker).Build().Run();
-        }
+        logging.ClearProviders();
+        logging.AddConsole();
+        logging.AddFile(options => { hostContext.Configuration.GetSection("Logging:File").Bind(options); }); //Requires nuget NetEscapades.Extensions.Logging.RollingFile
+    });
 
-        private static void WireUpWorker(HostBuilderContext hostContext, IServiceCollection services)
-        {
-            var configuration = hostContext.Configuration.GetSection("TimeLogServer").Get<Configuration>();
-            Timelog.Server.Listener.Startup(configuration);
+    services.AddHostedService<Timelog.Server.Viewers.ViewersServer>();
+    services.AddHostedService<Timelog.Server.UDPListener>();
+});
 
-            services.AddHostedService<Timelog.Server.Listener>();
-        }
+var host = builder.Build();
 
-        private static IHostBuilder CreateHostBuilder(string[] args, Action AfterConfigureConfiguration, Action AfterConfigureLogging, Action<HostBuilderContext, IServiceCollection> AfterConfigureServices)
-        {
-            var host = Host.CreateDefaultBuilder(args).ConfigureAppConfiguration((hostingContext, config) =>
-            {
-                config.AddJsonFile("appsettings.json", optional: true);
-                config.AddEnvironmentVariables();
+var logger = host.Services.GetRequiredService<ILogger<MainTimelogServer>>();
+var configuration = host.Services.GetRequiredService<IConfiguration>();
 
-                AfterConfigureConfiguration?.Invoke();
-            })
-            .ConfigureLogging((hostingContext, config) =>
-            {
-                config.AddConsole();
-                config.SetMinimumLevel(LogLevel.Debug);
+logger.LogInformation("Starting... ");
+
+var applicationKey = configuration.GetValue<Guid>("ApplicationKey");
+
+var viewersServerConfiguration = configuration.GetSection("ViewersServer").Get<ViewersServerConfiguration>();
+ViewersServer.Startup(viewersServerConfiguration, logger);
+
+var udpListenerConfiguration = configuration.GetSection("UDPListener").Get<UDPListenerConfiguration>();
+Timelog.Server.UDPListener.Startup(udpListenerConfiguration, logger);
+
+logger.LogInformation("Running... ");
+
+var hostTask = host.RunAsync();
+
+//Console.WriteLine("1: List all connected clients");
+//Console.WriteLine("2: List all filters");
+
+Console.WriteLine("Press Enter to terminate...");
+
+var readConsole = "";
+do
+{
+    readConsole = Console.ReadLine();
+    readConsole = "";//Force termination
+} while (readConsole != ""); //Empty string will terminate the program
 
 
-                AfterConfigureLogging?.Invoke();
-            })
-            .ConfigureServices((hostContext, services) =>
-            {
-                services.AddOptions();
+logger.LogInformation("Terminated. ");
 
-                AfterConfigureServices?.Invoke(hostContext, services);
-
-            });
-
-            return host;
-        }
-    }
-}
+/******************************************************************/
+//Just for nice Log Structure
+class MainTimelogServer { }

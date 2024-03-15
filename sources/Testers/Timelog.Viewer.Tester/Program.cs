@@ -27,7 +27,7 @@ builder.ConfigureServices((hostContext, services) =>
         logging.AddFile(options => { hostContext.Configuration.GetSection("Logging:File").Bind(options); }); //Requires nuget NetEscapades.Extensions.Logging.RollingFile
     });
 
-    services.AddHostedService<Timelog.Viewer.ViewerClient>();
+    services.AddHostedService<Timelog.Viewer.ReportingClient>();
 });
 
 var host = builder.Build();
@@ -36,8 +36,11 @@ var logger = host.Services.GetRequiredService<ILogger<MainTimelogViewer>>();
 var configuration = host.Services.GetRequiredService<IConfiguration>();
 
 logger.LogInformation("Starting... ");
-var timeLogReportingServerDriverConfiguration = configuration.GetSection("TimeLogReporting").Get<ViewerClientConfiguration>();
-Timelog.Viewer.ViewerClient.Startup(timeLogReportingServerDriverConfiguration, logger);
+
+var applicationKey = configuration.GetValue<Guid>("ApplicationKey");
+
+var reportingClientConfiguration = configuration.GetSection("ReportingClient").Get<ReportingClientConfiguration>();
+Timelog.Viewer.ReportingClient.Startup(applicationKey, reportingClientConfiguration, logger);
 
 logger.LogInformation("Running... ");
 
@@ -55,7 +58,7 @@ do
     readConsole = Console.ReadLine();
     if (readConsole == "1")
     {
-        HelperViewer.SetFilter(timeLogReportingServerDriverConfiguration);
+        HelperViewer.SetFilter(applicationKey);
         //Timelog.Viewer.TimeLogReportingServerDriver.SendMessage(readConsole);
     }
     else if (readConsole == "2")
@@ -74,11 +77,11 @@ class MainTimelogViewer { }
 
 static class HelperViewer
 {
-    public static void SetFilter(ViewerClientConfiguration viewerClientConfiguration)
+    public static void SetFilter(Guid applicationGuid)
     {
         FilterCriteria filterCriteria = new FilterCriteria()
         {
-            ViewerGuid = viewerClientConfiguration.WatsonTCPClientConfiguration.ApplicationKey,
+            ViewerGuid = applicationGuid,
             StateCode = (int)FilterCriteriaState.On,
             DomainMask = new byte[] { 192, 168, 1, 1 },
             MaxLogLevelClient = 5,
@@ -87,11 +90,11 @@ static class HelperViewer
             BeginServerTimestamp = null,
             EndServerTimestamp = null
         };
-        Timelog.Viewer.ViewerClient.SetFilter(filterCriteria);
+        Timelog.Viewer.ReportingClient.SetFilter(filterCriteria);
     }
 
     public static void GetFilter()
     {
-        Timelog.Viewer.ViewerClient.GetFilter();
+        Timelog.Viewer.ReportingClient.GetFilter();
     }
 }
