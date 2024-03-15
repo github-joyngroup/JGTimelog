@@ -14,6 +14,7 @@ namespace Timelog.Common.Models
     /// </summary>
     public class FilterCriteria
     {
+        //Header Fields
         /// <summary>
         /// Guid of the TimeLogServer - used only for requests between the TimeLog Reporting and the TimeLog Server
         /// </summary>
@@ -29,6 +30,8 @@ namespace Timelog.Common.Models
         /// </summary>
         public Guid? ViewerGuid { get; set; }
 
+        //Control Fields 
+
         /// <summary>
         /// A value from the StateEnum converted to Integer
         /// </summary>
@@ -37,7 +40,12 @@ namespace Timelog.Common.Models
         /// <summary>
         /// State of the filter
         /// </summary>
-        public FilterCriteriaState State { get { return (FilterCriteriaState) StateCode; } }
+        public FilterCriteriaState State { get { return (FilterCriteriaState)StateCode; } }
+
+        //Log Message Filtering Fields
+
+        /// <summary>The application key of the application where the log was generated</summary>
+        public Guid? ApplicationKey { get; set; }
 
         /// <summary>
         /// 4 bytes that represent the domain - should be parsable to an IP address
@@ -88,8 +96,55 @@ namespace Timelog.Common.Models
         //        return hash;
         //    }
         //}
-    }
 
+        /// <summary>
+        /// Check if this filter is interested in the received message
+        /// </summary>
+        /// <param name="logMessage"></param>
+        /// <returns></returns>
+        public bool Matches(LogMessage logMessage)
+        {
+            bool retBool = true;
+            //if Filter State is not ON, return false
+            retBool = retBool && State == FilterCriteriaState.On;
+            //Check Log Level
+            retBool = retBool && (MaxLogLevelClient is null || logMessage.LogLevelClient <= MaxLogLevelClient.Value);
+            //Check application key
+            retBool = retBool && (ApplicationKey is null || logMessage.ApplicationKey == ApplicationKey.Value);
+            //Check Domain
+            retBool = retBool && (DomainMask is null || MatchesMask(logMessage.Domain, DomainMask));
+            //Check Transactin Id
+            retBool = retBool && (TransactionID is null || logMessage.TransactionID == TransactionID.Value);
+            //Check Command
+            retBool = retBool && (CommandMask is null || MatchesMask(BitConverter.GetBytes((int)logMessage.Command), CommandMask));
+            //Check Begin Server Timestamp
+            retBool = retBool && (BeginServerTimestamp is null || logMessage.TimeServerTimeStamp >= BeginServerTimestamp.Value);
+            //Check End Server Timestamp
+            retBool = retBool && (EndServerTimestamp is null || logMessage.TimeServerTimeStamp <= EndServerTimestamp.Value);
+
+            return retBool;
+        }
+
+        public static bool MatchesMask(byte[] field, byte[] mask)
+        {
+            if (field.Length != mask.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < field.Length; i++)
+            {
+                // Apply the mask and compare
+                if ((field[i] & mask[i]) != field[i])
+                {
+                    return false; // Does not match the mask
+                }
+            }
+
+            return true; // All bytes match the mask
+        }
+    }
+ 
     /// <summary>
     /// States that a filter can be in, should be converted to integer and values shall be powers of 2 to be used as a bit mask
     /// </summary>

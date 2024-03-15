@@ -13,7 +13,6 @@ using Timelog.Common.Models;
 using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Timelog.Server.Search;
 using Timelog.Server.Viewers;
 
 namespace Timelog.Server
@@ -70,7 +69,7 @@ namespace Timelog.Server
             _configuration = configuration;
             _logger = logger;
 
-            AcceptedApplicationKeys = ViewersServer.GetAuthorizedAppKeys();
+            AcceptedApplicationKeys = LoadAuthorizedAppKeys();
 
             //initialize the queue manager to handle the received data
             //queueManager = new QueueManager(configuration.InternalCacheMaxEntries);
@@ -84,6 +83,49 @@ namespace Timelog.Server
             _clientEndPoint = new IPEndPoint(IPAddress.Any, _configuration.UDPSocketConfiguration.TimelogServerPort);
 
             _logger?.LogInformation($"Timelog.Server setup.");
+        }
+
+        /// <summary>
+        /// Load the authorized clients from the path defined configuration file, 
+        /// if path or file not present, will load directly from the configuration
+        /// </summary>
+        public static HashSet<Guid> LoadAuthorizedAppKeys()
+        {
+            var baseAcceptedApplicationKeys = new List<Guid>();
+
+            try
+            {
+                if (!string.IsNullOrEmpty(_configuration?.AuthorizedAppKeysFilePath) && File.Exists(_configuration.AuthorizedAppKeysFilePath))
+                {
+                    var lines = File.ReadAllLines(_configuration.AuthorizedAppKeysFilePath);
+
+                    foreach (var line in lines)
+                    {
+                        Guid candidateGuid = Guid.Empty;
+                        if (Guid.TryParse(line, out candidateGuid))
+                        {
+                            baseAcceptedApplicationKeys.Add(candidateGuid);
+                        }
+                    }
+                }
+                else if (_configuration?.AuthorizedAppKeysDirect is not null)
+                {
+                    baseAcceptedApplicationKeys = _configuration.AuthorizedAppKeysDirect;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error loading authorized clients: {ex.Message}");
+            }
+
+            if (baseAcceptedApplicationKeys is null || baseAcceptedApplicationKeys.Count == 0)
+            {
+                var errorMsg = $"No authorized clients found. Please check the configuration file or the authorized apps file.";
+                _logger.LogError(errorMsg);
+                throw new InvalidOperationException(errorMsg);
+            }
+
+            return baseAcceptedApplicationKeys.ToHashSet();
         }
 
         /// <summary>
@@ -156,9 +198,21 @@ namespace Timelog.Server
                     receivedLogMessage.TimeServerTimeStamp = DateTime.UtcNow;
 
                     //Flag filters interested in the message
-                    //*****************************
-                    //********** TODO EP ********** 
-                    //*****************************
+                    foreach(var currentFilterIdx in ViewersServer.CurrentViewersIndexes)
+                    {
+                        var logViewer = ViewersServer.LogViewers[currentFilterIdx];
+                        if (logViewer.Filters != null && logViewer.Filters.Any())
+                        {
+                            foreach (var filter in logViewer.Filters)
+                            {
+                                if (filter.Matches(receivedLogMessage))
+                                {
+                                    receivedLogMessage.FilterBitmask |= logViewer.Bitmask;
+                                    break;
+                                }
+                            }
+                        }
+                    }
 
                     //Add the received data to the queue
                     ReceivedDataQueue?.Add(receivedLogMessage);
@@ -177,10 +231,10 @@ namespace Timelog.Server
                         ForceFlushToDisk = false;
                     }
                     //Used in debug to make sure messages are incoming
-                    //if (ReceivedDataQueue.CurrentIndex % 1500 == 0)
-                    //{
-                    //    _logger.LogInformation($"CurrentIndex: {ReceivedDataQueue.CurrentIndex}");
-                    //}
+                    if (ReceivedDataQueue.CurrentIndex % 50000 == 0)
+                    {
+                        _logger.LogInformation($"CurrentIndex: {ReceivedDataQueue.CurrentIndex}");
+                    }
                 }
                 catch (Exception e)
                 {
@@ -204,6 +258,16 @@ namespace Timelog.Server
  
     public class UDPListenerConfiguration
     {
+        /// <summary>
+        /// The path of a json file with the Access Control List (ACL), of the clients that will be authorized to communicate with the server.
+        /// </summary>
+        public string AuthorizedAppKeysFilePath { get; set; }
+
+        /// <summary>
+        /// Other way to configure the list of Guids that can communicate with the server.
+        /// </summary>
+        public List<Guid> AuthorizedAppKeysDirect { get; set; }
+
         public UDPListenerUDPSocketConfiguration UDPSocketConfiguration { get; set; }
         public UDPListenerCacheConfiguration CacheConfiguration { get; set; }
         public UDPListenerLogFileManager LogFileManagerConfiguration { get; set; }

@@ -61,6 +61,12 @@ namespace Timelog.Reporting
         {
             switch (operation)
             {
+                case TimelogTCPOperation.Connect:
+                    _logger?.LogInformation($"Connected to the Timelog Server with Guid: {clientGuid}");
+                    //Send current filters to the server
+                    _client.SetFilter(ViewerFiltersHandler.ListFilters());
+                    break;
+
                 default:
                     _logger?.LogDebug($"Operation not implemented: {operation.ToString()}");
                     break;

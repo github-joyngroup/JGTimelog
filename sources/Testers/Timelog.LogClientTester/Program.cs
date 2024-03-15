@@ -11,6 +11,7 @@ namespace Timelog.LogClientTester
 {
     internal class Program
     {
+        private static IConfiguration _configRoot;
         private static void Main(string[] args)
         {
             try
@@ -25,31 +26,34 @@ namespace Timelog.LogClientTester
             }
         }
 
-        public static Configuration ReadConfiguration(string file, string filePath)
+        public static LoggerConfiguration ReadConfiguration(string file, string filePath)
         {
-            var configuration = new Configuration();
+            var configuration = new LoggerConfiguration();
             var configurationBuilder = new ConfigurationBuilder()
                 .SetBasePath(filePath)
                 .AddJsonFile(file);
 
-            IConfigurationRoot configRoot = configurationBuilder.Build();
-            configRoot.GetSection("TimelogTestClientService").Bind(configuration);
+            _configRoot = configurationBuilder.Build();
+            _configRoot.GetSection("TimelogTestClientService").Bind(configuration);
 
             // Add additional validation if needed
 
             return configuration;
         }
 
-        private static void InitializeApplication(Configuration configuration)
+        private static void InitializeApplication(LoggerConfiguration configuration)
         {
             Logger.Startup(configuration, null);
         }
 
-        private static void RunApplication(Configuration configuration)
+        private static void RunApplication(LoggerConfiguration configuration)
         {
+            var applicationKey = _configRoot.GetValue<Guid>("ApplicationKey");
+            var secondaryApplicationKey = _configRoot.GetValue<Guid>("SecondaryApplicationKey");
+
             var logMessage = new Common.Models.LogMessage
             {
-                ApplicationKey = configuration.ApplicationKey,
+                ApplicationKey = applicationKey,
                 Command = Common.Models.Commands.Start,
                 Domain = Encoding.UTF8.GetBytes($"1234"),
                 TransactionID = Guid.NewGuid(),
@@ -66,17 +70,17 @@ namespace Timelog.LogClientTester
                 //convert the integer to binary and send it as the domain
                 //logMessage.Domain = $"{Convert.ToString(i,2)}";
                 logMessage.Domain = Encoding.UTF8.GetBytes($"{i}");
-                logMessage.ApplicationKey = Guid.Parse("8ce94d5e-b2a3-4685-9e6c-ab21410b595f");
-                if (i % 15000 == 0)
+                logMessage.ApplicationKey = applicationKey;
+                if (i % 50000 == 0)
                 {
-                    logMessage.ApplicationKey = Guid.Parse("43e719fd-62bc-441f-80ba-cbb2a92ba44c");
+                    //logMessage.ApplicationKey = secondaryApplicationKey;
                     Console.WriteLine($"Logging message {i}");
                 }
                 Timelog.Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
                 //Timelog.Client.Logger.Log3();
 
                 i++;
-                //Thread.Sleep(10);
+                //Thread.Sleep(1000);
             }
 
             //Console.WriteLine("Enter a message to log (press Enter to log, type 'exit' to exit):");

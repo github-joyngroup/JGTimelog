@@ -47,10 +47,16 @@ logger.LogInformation("Running... ");
 var hostTask = host.RunAsync();
 
 Console.WriteLine("Write Command to Send to Server");
-Console.WriteLine("1 = Set Filter");
-Console.WriteLine("2 = Get Filter");
+Console.WriteLine("1 = Set Filter A - matches application with lot's of logs");
+Console.WriteLine("2 = Set Filter B - matches application with fewer number of logs");
+Console.WriteLine("3 = Set Filter C - does not match");
+
 Console.WriteLine("Press Enter to send...");
 Console.WriteLine("An empty string will terminate the program.");
+
+Guid filterA = Guid.Parse("33354290-b0a6-492b-8e97-aa84492d1c7e");
+Guid filterB = Guid.Parse("1cfa7816-5d2f-4ea1-a2d9-dabf09f37ba0");
+Guid filterC = Guid.Parse("d3e3e3e3-5d2f-4ea1-a2d9-dabf09f37ba0");
 
 var readConsole = "";
 do
@@ -58,12 +64,16 @@ do
     readConsole = Console.ReadLine();
     if (readConsole == "1")
     {
-        HelperViewer.SetFilter(applicationKey);
+        HelperViewer.SetFilter(applicationKey, filterA);
         //Timelog.Viewer.TimeLogReportingServerDriver.SendMessage(readConsole);
     }
     else if (readConsole == "2")
     {
-        HelperViewer.GetFilter();
+        HelperViewer.SetFilter(applicationKey, filterB);
+    }
+    else if (readConsole == "3")
+    {
+        HelperViewer.SetFilter(applicationKey, filterC);
     }
 } while (readConsole != ""); //Empty string will terminate the program
 
@@ -77,14 +87,15 @@ class MainTimelogViewer { }
 
 static class HelperViewer
 {
-    public static void SetFilter(Guid applicationGuid)
+    public static void SetFilter(Guid applicationGuid, Guid filterApplicationGuid)
     {
         FilterCriteria filterCriteria = new FilterCriteria()
         {
             ViewerGuid = applicationGuid,
+            ApplicationKey = filterApplicationGuid,
             StateCode = (int)FilterCriteriaState.On,
-            DomainMask = new byte[] { 192, 168, 1, 1 },
-            MaxLogLevelClient = 5,
+            DomainMask = null,
+            MaxLogLevelClient = null,
             TransactionID = null,
             CommandMask = null,
             BeginServerTimestamp = null,

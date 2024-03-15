@@ -11,17 +11,17 @@ namespace Timelog.Client
     {
         private static UdpClient udpClient;
         private static ILogger _logger;
-        private static Configuration ClientConfiguration;
+        private static LoggerConfiguration _configuration;
 
-        public static void Startup(Configuration configuration, ILogger logger)
+        public static void Startup(LoggerConfiguration configuration, ILogger logger)
         {
-            ClientConfiguration = configuration;
+            _configuration = configuration;
             _logger = logger;
 
             udpClient = new UdpClient();
-            udpClient.Connect(ClientConfiguration.TimelogServerHost, ClientConfiguration.TimelogServerPort);
+            udpClient.Connect(_configuration.TimelogServerHost, _configuration.TimelogServerPort);
 
-            _logger?.LogInformation($"Timelog.Client '{ClientConfiguration.ApplicationKey.ToString()[..4]}...' is ready to log to the server {configuration.TimelogServerHost}:{configuration.TimelogServerPort}.");
+            _logger?.LogInformation($"Timelog.Client...' is ready to log to the server {_configuration.TimelogServerHost}:{_configuration.TimelogServerPort}.");
         }
 
         // Existing Log method
@@ -42,5 +42,28 @@ namespace Timelog.Client
             {
             }
         }
+    }
+
+    public class LoggerConfiguration
+    {
+        /// <summary>
+        /// The FQDN of the Timelog server or their IP address
+        /// </summary>
+        public string TimelogServerHost { get; set; }
+
+        /// <summary>
+        /// The Timelog server network port number
+        /// </summary>
+        public int TimelogServerPort { get; set; }
+
+        /// <summary>
+        /// The Timelog level
+        /// </summary>
+        public LogLevel LogLevel { get; set; }
+
+        /// <summary>
+        /// Client Timestamp
+        /// </summary>
+        public bool UseClientTimestamp { get; set; }
     }
 }

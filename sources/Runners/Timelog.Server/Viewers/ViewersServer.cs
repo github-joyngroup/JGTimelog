@@ -22,8 +22,27 @@ namespace Timelog.Server.Viewers
         /// <summary>
         /// Master index of Current viewers, each entry will point to the index of the viewer in the static array of viewers
         /// </summary>
-        internal static List<int> CurrentViewersIndexes;
+        internal static HashSet<int> CurrentViewersIndexes;
 
+        /// <summary>
+        /// This has to be internal to allow the LogServerClient to access the current viewers
+        /// I'm not entirelly satistied with the usage of a lock and a try/catch, must study for better alternatives
+        /// </summary>
+        internal static LogViewer[] LogViewers 
+        {
+            get
+            {
+                _logViewerLocker.EnterReadLock();
+                try
+                {
+                    return _logViewers[_logViewerCurrentIndex];
+                }
+                finally
+                {
+                    _logViewerLocker.ExitReadLock();
+                }
+            }
+        }
 
         //Private Members
 
@@ -39,7 +58,7 @@ namespace Timelog.Server.Viewers
         /// Jagged array, the first index allows toggle between active-passive to allow hot swapping of the viewers
         /// Each entry will be a LogViewer, this array will be loaded on the startup of the server with the maximum allowed number of entries
         /// </summary>
-        private static LogViewer[][] _logViewers;
+        public static LogViewer[][] _logViewers;
 
         /// <summary>
         /// Current index of the first dimension of the jagged array _logViewers - will have the value 0 or 1 and will allow hot swapping of the viewers
@@ -95,6 +114,46 @@ namespace Timelog.Server.Viewers
         }
 
         /// <summary>
+        /// Handles a TCP operation. As the TCP communication is handled by the TCPServerWrapper this class shall only handle business logic
+        /// </summary>
+        private static void OnTimelogTCPOperation(TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters)
+        {
+            switch (operation)
+            {
+
+                case TimelogTCPOperation.Disconnect:
+                    RemoveFilters(clientGuid);
+                    break;
+
+                case TimelogTCPOperation.SetFilter:
+                    //If filters are present, will add them to the viewer, if not will remove the filters
+                    //This way the same SetFilter operation can be used to add or remove filters by the client
+                    if (filters != null && filters.Any())
+                    {
+                        AddFilters(clientGuid, filters);
+                    }
+                    else
+                    {
+                        RemoveFilters(clientGuid);
+                    }
+                    break;
+
+                case TimelogTCPOperation.GetFilter:
+                    var currentFilters = GetFilters(clientGuid);
+                    _server.SendMessage(clientGuid, System.Text.Json.JsonSerializer.Serialize(currentFilters), new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.CurrentFilter } });
+                    break;
+
+                default:
+                    _logger?.LogDebug($"Operation not implemented: {operation.ToString()} - Client: '{clientGuid.ToString()}'");
+                    break;
+            }
+        }
+
+        //Private methods
+
+        #region Viewers Management Methods
+
+        /// <summary>
         /// Load the authorized clients from the path defined configuration file, 
         /// if path or file not present, will load directly from the configuration
         /// </summary>
@@ -146,7 +205,9 @@ namespace Timelog.Server.Viewers
                 _logViewerCurrentIndex = 0;
                 _logViewers = new LogViewer[2][];
                 _logViewers[0] = baseAcceptedApplicationKeys.Select((bapk, idx) => new LogViewer(bapk, idx)).ToArray();
-                _logViewers[1] = new LogViewer[_configuration.MaximumNumberViewers];
+                _logViewers[1] = new LogViewer[baseAcceptedApplicationKeys.Count];
+
+                CurrentViewersIndexes = new HashSet<int>();
             }
             finally
             {
@@ -154,37 +215,95 @@ namespace Timelog.Server.Viewers
             }
         }
 
-
         /// <summary>
-        /// Handles a TCP operation. As the TCP communication is handled by the TCPServerWrapper this class shall only handle business logic
+        /// Will Find the index of the viewerin the current viewers list
         /// </summary>
-        private static void OnTimelogTCPOperation(TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters)
+        private static int FindViewerIndex(Guid viewerGuid)
         {
-            switch (operation)
+            _logViewerLocker.EnterReadLock();
+            try
             {
-
-                case TimelogTCPOperation.Disconnect:
-                    //ViewerFiltersHandler.RemoveFilter(clientGuid);
-                    break;
-
-                case TimelogTCPOperation.SetFilter:
-                    //if (filters.Any())
-                    //{
-                    //    ViewerFiltersHandler.AddFilter(filters.First());
-                    //}
-                    break;
-
-                case TimelogTCPOperation.GetFilter:
-                    //var filter = ViewerFiltersHandler.GetFilter(clientGuid);
-                    //_server.SendMessage(clientGuid, System.Text.Json.JsonSerializer.Serialize(filter), new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.CurrentFilter } });
-                    break;
-
-                default:
-                    _logger?.LogDebug($"Operation not implemented: {operation.ToString()} - Client: '{clientGuid.ToString()}'");
-                    break;
+                return _logViewers[_logViewerCurrentIndex].ToList().FindIndex(x => x.ApplicationKey == viewerGuid);
+            }
+            finally
+            {
+                _logViewerLocker.ExitReadLock();
             }
         }
 
+        /// <summary>
+        /// Will add the filters for the viewer identified by the viewerGuid 
+        /// </summary>
+        /// <param name="viewerGuid"></param>
+        /// <param name="filters"></param>
+        private static void AddFilters(Guid viewerGuid, List<FilterCriteria> filters)
+        {
+            var viewerIdx = FindViewerIndex(viewerGuid); 
+            
+            var nextIndex = _logViewerCurrentIndex == 0 ? 1 : 0;
+            
+            _logViewerLocker.EnterReadLock();
+            try
+            {
+                //Copy current to next
+                _logViewers[_logViewerCurrentIndex].CopyTo(_logViewers[nextIndex],0);
+            }
+            finally
+            {
+                _logViewerLocker.ExitReadLock();
+            }
+
+            //Update the client guid filters
+            _logViewers[nextIndex][viewerIdx].Filters = filters;
+            _logViewerLocker.EnterWriteLock();
+            try
+            {
+                _logViewerCurrentIndex = nextIndex;
+                CurrentViewersIndexes.Add(viewerIdx);
+            }
+            finally
+            {
+                _logViewerLocker.ExitWriteLock();
+            }
+        }
+
+        public static void RemoveFilters(Guid viewerGuid)
+        {
+            var viewerIdx = FindViewerIndex(viewerGuid);
+            var nextIndex = _logViewerCurrentIndex == 0 ? 1 : 0;
+
+            _logViewerLocker.EnterReadLock();
+            try
+            {
+                //Copy current to next
+                _logViewers[_logViewerCurrentIndex].CopyTo(_logViewers[nextIndex], 0);
+            }
+            finally
+            {
+                _logViewerLocker.ExitReadLock();
+            }
+
+            //Update the client guid filters
+            _logViewers[nextIndex][viewerIdx].Filters = null;
+            _logViewerLocker.EnterWriteLock();
+            try
+            {
+                _logViewerCurrentIndex = nextIndex;
+                CurrentViewersIndexes.Remove(viewerIdx);
+            }
+            finally
+            {
+                _logViewerLocker.ExitWriteLock();
+            }
+        }
+
+        public static List<FilterCriteria> GetFilters(Guid viewerGuid)
+        {
+            var viewerIdx = FindViewerIndex(viewerGuid);
+            return _logViewers[_logViewerCurrentIndex][viewerIdx].Filters;
+        }
+
+        #endregion
 
         //Public Methods
 

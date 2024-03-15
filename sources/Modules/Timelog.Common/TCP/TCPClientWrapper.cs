@@ -237,8 +237,9 @@ namespace Timelog.Common.TCP
         public int RetryConnectFrequency { get; set; } = 15000;
 
         /// <summary>
-        /// When connected, the amount of time to wait before checking the connection health, default is 120000 = 2 minutes
+        /// When connected, the amount of time to wait before checking the connection health, default is 30000 = 30 seconds
+        /// It's also the Ping Frequency when connection is established
         /// </summary>
-        public int CheckConnectionHealthFrequency { get; set; } = 120000;
+        public int CheckConnectionHealthFrequency { get; set; } = 30000;
     }
 }
