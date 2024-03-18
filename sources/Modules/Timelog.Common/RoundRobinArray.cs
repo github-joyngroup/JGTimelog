@@ -67,26 +67,27 @@ namespace Timelog.Common
             }
         }
 
-        public T[] GetItems()
-        {
-            _lock.EnterReadLock();
-            try
-            {
-                var result = new T[_limit];
-                Array.Copy(_array, result, _limit);
-                return result;
-            }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
-        }
 
         public T this[int index]
         {
             get
             {
                return _array[index];
+            }
+        }
+
+        public (T[] LogMessages, int CurrentIndex) GetSnapshot()
+        {
+            _lock.EnterReadLock();
+            try
+            {
+                var result = new T[_limit];
+                Array.Copy(_array, result, _limit);
+                return (result, _index);
+            }
+            finally
+            {
+                _lock.ExitReadLock();
             }
         }
     }

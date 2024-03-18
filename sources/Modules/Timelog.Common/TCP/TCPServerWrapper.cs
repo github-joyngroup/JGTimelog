@@ -84,7 +84,7 @@ namespace Timelog.Common.TCP
             if (_configuration.AuthorizedAppKeys.Contains(e.Client.Guid))
             {
                 _logger?.LogInformation($"TCP Server '{_configuration.Name}' got a new connection from {e.Client.ToString()}.");
-                OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, e.Client.Guid, null);
+                OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, e.Client.Guid, null, null);
             }
             else
             {
@@ -99,7 +99,7 @@ namespace Timelog.Common.TCP
         private void OnTcpClientDisconnected(object sender, DisconnectionEventArgs e)
         {
             _logger?.LogInformation($"TCP Server '{_configuration.Name}' client {e.Client.ToString()}' disconnected with reason {e.Reason}.");
-            OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Disconnect, e.Client.Guid, null);
+            OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Disconnect, e.Client.Guid, null, null);
         }
 
         /// <summary>
@@ -121,13 +121,13 @@ namespace Timelog.Common.TCP
                 //No operation, just log the message
                 case TimelogTCPOperation.None:
                     _logger?.LogDebug($"Nop message from {e.Client.ToString()}: '{Encoding.UTF8.GetString(e.Data)}'");
-                    OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, null);
+                    OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, null, null);
                     break;
 
                 //Ping operation, just log the message
                 case TimelogTCPOperation.Ping:
                     _logger?.LogDebug($"Ping message from {e.Client.ToString()}: '{Encoding.UTF8.GetString(e.Data)}'");
-                    OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, null);
+                    OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, null, null);
                     break;
 
                 //Set Filter message, parse the filter and bubble up to OnTimeLogTCPOperation
@@ -136,7 +136,7 @@ namespace Timelog.Common.TCP
                     var filterStr = Encoding.UTF8.GetString(e.Data);
                     var filter = System.Text.Json.JsonSerializer.Deserialize<List<FilterCriteria>>(filterStr);
 
-                    OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, filter);
+                    OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, filter, null);
 
                     _logger?.LogDebug($"{e.Client.ToString()} set it's filter");
                     break;
@@ -144,7 +144,7 @@ namespace Timelog.Common.TCP
                 //Get Filter message, bubble up to OnTimeLogTCPOperation
                 case TimelogTCPOperation.GetFilter:
                     _logger?.LogInformation($"{e.Client.ToString()} is requesting it's current filter");
-                    OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, null);
+                    OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, null, null);
                     break;
 
                 //Fallback scenario, log the message

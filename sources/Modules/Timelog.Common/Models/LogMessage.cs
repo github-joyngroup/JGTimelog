@@ -34,9 +34,9 @@ namespace Timelog.Common.Models
         public int LogLevelClient;
 
         /// <summary>
-        /// ??????? TO BE DEFINED
+        /// 4 bytes to be used by the client to tag the message with a client specific value
         /// </summary>
-        public string TagClient;
+        public byte[] TagClient;
 
         /// <summary>
         /// Id of the transaction, generally used to group several logs together to "tell a story"
@@ -64,22 +64,18 @@ namespace Timelog.Common.Models
         public byte[] Reserved;
 
         /// <summary>
-        /// Message associated with the log message
+        /// 128 bytes that represent the header of the message, client defined 
         /// </summary>
-        public Message Message;
+        public byte[] MessageHeader;
+
+        /// <summary>
+        /// 1024 bytes that represent the data of the message, client defined 
+        /// </summary>
+        public byte[] MessageData;
 
         /// <summary>
         /// Will identify the viewers interested in this message, i.e. those that have any filter that matches this message
         /// </summary>
         public long FilterBitmask;
-    }
-
-    [Serializable]
-    public struct Message
-    {
-        public string Header;
-
-        public byte[] Data;
-
     }
 }

@@ -28,7 +28,8 @@ namespace Timelog.Common.Models
         
         //200 - 300 : Server Requests
         CurrentFilter = 202,
+        LogMessages = 203
     }
 
-    public delegate void OnTimelogTCPOperationHandler (TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters);
+    public delegate void OnTimelogTCPOperationHandler (TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters, List<LogMessage> logMessages);
 }

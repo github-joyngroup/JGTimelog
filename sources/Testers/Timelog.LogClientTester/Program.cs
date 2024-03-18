@@ -58,7 +58,8 @@ namespace Timelog.LogClientTester
                 Domain = Encoding.UTF8.GetBytes($"1234"),
                 TransactionID = Guid.NewGuid(),
                 OriginTimestamp = DateTime.UtcNow,
-                Message = new Common.Models.Message { Header = $"", Data = Encoding.UTF8.GetBytes($"") },
+                MessageHeader = Encoding.UTF8.GetBytes($""),
+                MessageData = Encoding.UTF8.GetBytes($"")
             };
 
             const int MAX = 10000000;
@@ -76,11 +77,15 @@ namespace Timelog.LogClientTester
                     //logMessage.ApplicationKey = secondaryApplicationKey;
                     Console.WriteLine($"Logging message {i}");
                 }
+                logMessage.MessageData = Encoding.UTF8.GetBytes($"Message {i}");
                 Timelog.Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace, logMessage);
                 //Timelog.Client.Logger.Log3();
 
                 i++;
-                //Thread.Sleep(1000);
+                //Thread.Sleep(1000); // 1 / second
+                //Thread.Sleep(100);  // 10 / second
+                //Thread.Sleep(10);  // 100 / second
+                //Thread.Sleep(1);  // ~1000 / second
             }
 
             //Console.WriteLine("Enter a message to log (press Enter to log, type 'exit' to exit):");

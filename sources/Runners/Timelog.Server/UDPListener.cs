@@ -45,20 +45,8 @@ namespace Timelog.Server
         /// <summary>An hashset containing the Guids of the applications that can submit logs</summary>
         private static HashSet<Guid> AcceptedApplicationKeys;
         
-        /// <summary>The file manager that will periodically dump information to the file system</summary>
-        private static LogFileManager LogFileManager;
-
         /// <summary>The cancellation token source to stop the listener - will be flagged on the stop method</summary>
         private static CancellationTokenSource StoppingCancelationTokenSource;
-
-
-        //Control members
-        /// <summary>Current File Dump index</summary>
-        private static int LastDumpToFileIndex= 0;
-        /// <summary>When did the last dump to file happened</summary>
-        private static DateTime? LastDumpToFileMoment = DateTime.UtcNow;
-        /// <summary>Force a flush to the disk on the next iteration</summary>
-        private static bool ForceFlushToDisk = false;
 
 
         /// <summary>
@@ -74,9 +62,6 @@ namespace Timelog.Server
             //initialize the queue manager to handle the received data
             //queueManager = new QueueManager(configuration.InternalCacheMaxEntries);
             ReceivedDataQueue = new RoundRobinArray<LogMessage>(_configuration.CacheConfiguration.InternalCacheMaxEntries);
-
-            //initialize the log file manager to handle the log files
-            LogFileManager = new LogFileManager(ReceivedDataQueue, _configuration.LogFileManagerConfiguration.LogFilesPath, _configuration.LogFileManagerConfiguration.MaxLogFiles, _configuration.LogFileManagerConfiguration.MaxLogFileEntries);
 
             //initialize the UDP server
             _server = new UdpClient(_configuration.UDPSocketConfiguration.TimelogServerPort);
@@ -129,7 +114,7 @@ namespace Timelog.Server
         }
 
         /// <summary>
-        /// Starts the UDPListener and the LogFileManager thread
+        /// Starts the UDPListener
         /// </summary>
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -139,13 +124,12 @@ namespace Timelog.Server
             
             //Start listening to the UDP port
             new Thread(() => Listening(StoppingCancelationTokenSource.Token)).Start();
-            new Thread(() => FlushToDiskTimer(StoppingCancelationTokenSource.Token)).Start();
 
             return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Stops the UDPListener and the LogFileManager thread
+        /// Stops the UDPListener
         /// </summary>
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
@@ -156,10 +140,6 @@ namespace Timelog.Server
             {
                 _logger.LogInformation($"Stopping listening on port UDP:{_configuration.UDPSocketConfiguration.TimelogServerPort}.");
                 _server?.Close();
-                
-                //Dump the last received data to the log file and close the log file manager
-                LogFileManager?.DumpFilesPeriodically(ReceivedDataQueue.CurrentIndex, LastDumpToFileIndex);
-                LogFileManager?.Close();
 
             }, CancellationToken.None);
 
@@ -178,10 +158,15 @@ namespace Timelog.Server
             _logger.LogInformation($"Timelog.Server is listening on port UDP:{_configuration.UDPSocketConfiguration.TimelogServerPort}.");
             //StreamWriter _streamWriter = new StreamWriter("C:\\TEMP\\TimelogFiltered\\Timelog_filtered.txt");
 
+            List<LogViewer> currentLogViewers = ViewersServer.CloneCurrentLogViewers();
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
-                {                    
+                {
+                    if (ViewersServer.LogViewersDirty)
+                    {
+                        currentLogViewers = ViewersServer.CloneCurrentLogViewers();
+                    }
                     //Receive the data from the UDP port
                     var receivedData = _server?.Receive(ref _clientEndPoint);
                     
@@ -198,9 +183,8 @@ namespace Timelog.Server
                     receivedLogMessage.TimeServerTimeStamp = DateTime.UtcNow;
 
                     //Flag filters interested in the message
-                    foreach(var currentFilterIdx in ViewersServer.CurrentViewersIndexes)
+                    foreach(var logViewer in currentLogViewers)
                     {
-                        var logViewer = ViewersServer.LogViewers[currentFilterIdx];
                         if (logViewer.Filters != null && logViewer.Filters.Any())
                         {
                             foreach (var filter in logViewer.Filters)
@@ -217,24 +201,33 @@ namespace Timelog.Server
                     //Add the received data to the queue
                     ReceivedDataQueue?.Add(receivedLogMessage);
                     int auxCidx = ReceivedDataQueue.CurrentIndex - 1;
-                    //LogMessageSearch.DumpSearched(auxCidx, _streamWriter);
-                        
-                    if (auxCidx >= LastDumpToFileIndex + _configuration.LogFileManagerConfiguration.FlushItemsSize || ForceFlushToDisk)
-                    {
-                        ForceFlushToDisk = false;
-                        int auxLidf = LastDumpToFileIndex;
-                        //int auxCidx = ReceivedDataQueue.CurrentIndex-1;
-                        Task.Run(() => LogFileManager?.DumpFilesPeriodically(auxCidx, auxLidf));
 
-                        LastDumpToFileIndex = ReceivedDataQueue.CurrentIndex;
-                        LastDumpToFileMoment = receivedLogMessage.TimeServerTimeStamp;
-                        ForceFlushToDisk = false;
-                    }
-                    //Used in debug to make sure messages are incoming
-                    if (ReceivedDataQueue.CurrentIndex % 50000 == 0)
+                    if (auxCidx >= LogFileManager.LastDumpToFileIndex + LogFileManager.FlushItemsSize || //Already have more than FlushItemsSize items
+                        auxCidx < LogFileManager.LastDumpToFileIndex) //Round robined - could calculate the difference between the two indexes but will just to an extra dump file when round robined
                     {
-                        _logger.LogInformation($"CurrentIndex: {ReceivedDataQueue.CurrentIndex}");
+                        LogFileManager.Pulse();
                     }
+
+                    if (auxCidx >= ViewersServer.LastDumpToViewersIndex + ViewersServer.FlushItemsSize || //Already have more than FlushItemsSize items
+                        auxCidx < ViewersServer.LastDumpToViewersIndex) //Round robined - could calculate the difference between the two indexes but will just to an extra dump file when round robined
+                    {
+                        ViewersServer.Pulse();
+                    }
+
+                    //    ForceFlushToDisk = false;
+                    //    int auxLidf = LastDumpToFileIndex;
+                    //    //int auxCidx = ReceivedDataQueue.CurrentIndex-1;
+                    //    Task.Run(() => LogFileManager?.DumpFilesPeriodically(auxCidx, auxLidf));
+
+                    //    LastDumpToFileIndex = ReceivedDataQueue.CurrentIndex;
+                    //    LastDumpToFileMoment = receivedLogMessage.TimeServerTimeStamp;
+                    //    ForceFlushToDisk = false;
+                    //}
+                    //Used in debug to make sure messages are incoming
+                    //if (ReceivedDataQueue.CurrentIndex % 50000 == 0)
+                    //{
+                    //    _logger.LogInformation($"CurrentIndex: {ReceivedDataQueue.CurrentIndex}");
+                    //}
                 }
                 catch (Exception e)
                 {
@@ -243,17 +236,18 @@ namespace Timelog.Server
             }
         }
 
-        private static void FlushToDiskTimer(CancellationToken cancellationToken)
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                Thread.Sleep(_configuration.LogFileManagerConfiguration.FlushTimeSeconds * 1000);
-                if(DateTime.UtcNow - LastDumpToFileMoment > TimeSpan.FromSeconds(_configuration.LogFileManagerConfiguration.FlushTimeSeconds))
-                {
-                    ForceFlushToDisk = true;
-                }
-            }
-        }
+        ///Moved to LogFileManager
+        //private static void FlushToDiskTimer(CancellationToken cancellationToken)
+        //{
+        //    while (!cancellationToken.IsCancellationRequested)
+        //    {
+        //        Thread.Sleep(_configuration.LogFileManagerConfiguration.FlushTimeSeconds * 1000);
+        //        if(DateTime.UtcNow - LastDumpToFileMoment > TimeSpan.FromSeconds(_configuration.LogFileManagerConfiguration.FlushTimeSeconds))
+        //        {
+        //            ForceFlushToDisk = true;
+        //        }
+        //    }
+        //}
     }
  
     public class UDPListenerConfiguration
@@ -270,7 +264,6 @@ namespace Timelog.Server
 
         public UDPListenerUDPSocketConfiguration UDPSocketConfiguration { get; set; }
         public UDPListenerCacheConfiguration CacheConfiguration { get; set; }
-        public UDPListenerLogFileManager LogFileManagerConfiguration { get; set; }
     }
     
     public class UDPListenerUDPSocketConfiguration
@@ -287,33 +280,5 @@ namespace Timelog.Server
         /// The number of entries to be accepted on the global internal cache. Default is 1000000.
         /// </summary>
         public int InternalCacheMaxEntries { get; set; } = 1000000;
-    }
-
-    public class UDPListenerLogFileManager
-    {
-        /// <summary>
-        /// The path of the log files. Default is the "Timelog" folder inside the current user temporary folder.
-        /// </summary>
-        public string LogFilesPath { get; set; } = Path.Combine(Path.GetTempPath(), "Timelog");
-
-        /// <summary>
-        /// The maximum number of log files to be created. Log files are rotating. Default is 10.
-        /// </summary>
-        public int MaxLogFiles { get; set; } = 10;
-
-        /// <summary>
-        /// The maximum number of entries per log file. Default is 100000.
-        /// </summary>
-        public int MaxLogFileEntries { get; set; } = 100000;
-
-        /// <summary>
-        /// The number of entries that force a flush to log file. Default is 20000.
-        /// </summary>
-        public int FlushItemsSize { get; set; } = 20000;
-
-        /// <summary>
-        /// The number of seconds that force a flush to log file. Default is 30 seconds.
-        /// </summary>
-        public int FlushTimeSeconds { get; set; } = 30;
     }
 }

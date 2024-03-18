@@ -29,6 +29,7 @@ builder.ConfigureServices((hostContext, services) =>
 
     services.AddHostedService<Timelog.Server.Viewers.ViewersServer>();
     services.AddHostedService<Timelog.Server.UDPListener>();
+    services.AddHostedService<Timelog.Server.LogFileManager>();
 });
 
 var host = builder.Build();
@@ -40,11 +41,14 @@ logger.LogInformation("Starting... ");
 
 var applicationKey = configuration.GetValue<Guid>("ApplicationKey");
 
-var viewersServerConfiguration = configuration.GetSection("ViewersServer").Get<ViewersServerConfiguration>();
-ViewersServer.Startup(viewersServerConfiguration, logger);
-
 var udpListenerConfiguration = configuration.GetSection("UDPListener").Get<UDPListenerConfiguration>();
-Timelog.Server.UDPListener.Startup(udpListenerConfiguration, logger);
+Timelog.Server.UDPListener.Startup(udpListenerConfiguration, logger); 
+
+var viewersServerConfiguration = configuration.GetSection("ViewersServer").Get<ViewersServerConfiguration>();
+ViewersServer.Startup(viewersServerConfiguration, UDPListener.ReceivedDataQueue, logger);
+
+var logFileManagerConfiguration = configuration.GetSection("LogFileManager").Get<LogFileManagerConfiguration>();
+Timelog.Server.LogFileManager.Startup(logFileManagerConfiguration, UDPListener.ReceivedDataQueue, logger);
 
 logger.LogInformation("Running... ");
 

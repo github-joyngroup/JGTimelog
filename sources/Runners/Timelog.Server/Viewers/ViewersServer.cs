@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Timelog.Common;
 using Timelog.Common.Models;
 using Timelog.Common.TCP;
 
@@ -17,34 +19,25 @@ namespace Timelog.Server.Viewers
     /// </summary>
     internal class ViewersServer : BackgroundService
     {
+        //Internal Properties
 
-        //Internal Members
+        /// <summary>
+        /// This has to be internal so that main Listening Thread can access it and decide to reload the viewers
+        /// </summary>
+        internal static bool LogViewersDirty { get; set; } = false;
+
+        /// <summary>Current File Dump index</summary>
+        internal static int LastDumpToViewersIndex { get; set; }
+
+        /// <summary>Getter for the Flush Items Size configuration</summary>
+        internal static int FlushItemsSize { get { return _configuration.FlushItemsSize; } }
+
+        //Private Members
+
         /// <summary>
         /// Master index of Current viewers, each entry will point to the index of the viewer in the static array of viewers
         /// </summary>
-        internal static HashSet<int> CurrentViewersIndexes;
-
-        /// <summary>
-        /// This has to be internal to allow the LogServerClient to access the current viewers
-        /// I'm not entirelly satistied with the usage of a lock and a try/catch, must study for better alternatives
-        /// </summary>
-        internal static LogViewer[] LogViewers 
-        {
-            get
-            {
-                _logViewerLocker.EnterReadLock();
-                try
-                {
-                    return _logViewers[_logViewerCurrentIndex];
-                }
-                finally
-                {
-                    _logViewerLocker.ExitReadLock();
-                }
-            }
-        }
-
-        //Private Members
+        private static HashSet<int> _currentViewersIndexes;
 
         /// <summary>Logger to use</summary>
         private static ILogger _logger;
@@ -58,7 +51,7 @@ namespace Timelog.Server.Viewers
         /// Jagged array, the first index allows toggle between active-passive to allow hot swapping of the viewers
         /// Each entry will be a LogViewer, this array will be loaded on the startup of the server with the maximum allowed number of entries
         /// </summary>
-        public static LogViewer[][] _logViewers;
+        private static LogViewer[][] _logViewers;
 
         /// <summary>
         /// Current index of the first dimension of the jagged array _logViewers - will have the value 0 or 1 and will allow hot swapping of the viewers
@@ -73,12 +66,30 @@ namespace Timelog.Server.Viewers
         /// <summary>
         /// TCP Connections Handler
         /// </summary>
-        internal static TCPServerWrapper _server;
+        private static TCPServerWrapper _server;
+
+        /// <summary>
+        /// Round robin array to store the log messages as they are received
+        /// </summary>
+        private static RoundRobinArray<LogMessage>? _receivedDataQueue;
+
+        /// <summary>The cancellation token source to stop the listener - will be flagged on the stop method</summary>
+        private static CancellationTokenSource StoppingCancelationTokenSource;
+
+        /// <summary>
+        /// Lock object to synchronize access to the flushing thread
+        /// </summary>
+        private static object _flushingThreadLock = new();
+
+        /// <summary>Static JsonSerializerOptions to be reused</summary>
+        private static JsonSerializerOptions includeFieldsJsonSerializerOptions = new JsonSerializerOptions { IncludeFields = true };
+
+        //Methods
 
         /// <summary>
         /// Setup the Views Manager, load configuration, initializes _logViewers and prepare the TCP socket to start listening
         /// </summary>
-        public static void Startup(ViewersServerConfiguration configuration, ILogger logger)
+        public static void Startup(ViewersServerConfiguration configuration, RoundRobinArray<LogMessage>? receivedDataQueue, ILogger logger)
         {
             _configuration = configuration;
             _logger = logger;
@@ -89,17 +100,24 @@ namespace Timelog.Server.Viewers
             _server = new TCPServerWrapper();
             _server.Startup(_configuration.WatsonTcpServerConfiguration, logger, OnTimelogTCPOperation);
 
+            _receivedDataQueue = receivedDataQueue;
+
             _logger?.LogInformation($"Viewers Manager setup.");
         }
-
 
         /// <summary>
         /// Starts the ViewerServer
         /// </summary>
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            StoppingCancelationTokenSource = new CancellationTokenSource();
+
             _logger?.LogInformation($"Viewers manager is starting...");
-            return Task.Run(() => _server.Start(), stoppingToken);
+            return Task.Run(() =>
+            {
+                _server.Start();
+                FlushingThread(StoppingCancelationTokenSource.Token);
+            }, stoppingToken);
         }
 
         /// <summary>
@@ -110,13 +128,19 @@ namespace Timelog.Server.Viewers
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
             _logger?.LogInformation($"Viewers manager is stopping...");
-            await Task.Run(() => _server.Stop(), cancellationToken);
+
+            StoppingCancelationTokenSource.Cancel();
+
+            await Task.Run(() =>
+            {
+                _server.Stop();
+            }, cancellationToken);
         }
 
         /// <summary>
         /// Handles a TCP operation. As the TCP communication is handled by the TCPServerWrapper this class shall only handle business logic
         /// </summary>
-        private static void OnTimelogTCPOperation(TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters)
+        private static void OnTimelogTCPOperation(TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters, List<LogMessage> logMessages)
         {
             switch (operation)
             {
@@ -207,7 +231,7 @@ namespace Timelog.Server.Viewers
                 _logViewers[0] = baseAcceptedApplicationKeys.Select((bapk, idx) => new LogViewer(bapk, idx)).ToArray();
                 _logViewers[1] = new LogViewer[baseAcceptedApplicationKeys.Count];
 
-                CurrentViewersIndexes = new HashSet<int>();
+                _currentViewersIndexes = new HashSet<int>();
             }
             finally
             {
@@ -259,7 +283,8 @@ namespace Timelog.Server.Viewers
             try
             {
                 _logViewerCurrentIndex = nextIndex;
-                CurrentViewersIndexes.Add(viewerIdx);
+                _currentViewersIndexes.Add(viewerIdx);
+                LogViewersDirty = true;
             }
             finally
             {
@@ -267,7 +292,7 @@ namespace Timelog.Server.Viewers
             }
         }
 
-        public static void RemoveFilters(Guid viewerGuid)
+        private static void RemoveFilters(Guid viewerGuid)
         {
             var viewerIdx = FindViewerIndex(viewerGuid);
             var nextIndex = _logViewerCurrentIndex == 0 ? 1 : 0;
@@ -289,7 +314,8 @@ namespace Timelog.Server.Viewers
             try
             {
                 _logViewerCurrentIndex = nextIndex;
-                CurrentViewersIndexes.Remove(viewerIdx);
+                _currentViewersIndexes.Remove(viewerIdx);
+                LogViewersDirty = true;
             }
             finally
             {
@@ -297,21 +323,17 @@ namespace Timelog.Server.Viewers
             }
         }
 
-        public static List<FilterCriteria> GetFilters(Guid viewerGuid)
+        private static List<FilterCriteria> GetFilters(Guid viewerGuid)
         {
             var viewerIdx = FindViewerIndex(viewerGuid);
             return _logViewers[_logViewerCurrentIndex][viewerIdx].Filters;
         }
-
-        #endregion
-
-        //Public Methods
-
+        
         /// <summary>
         /// Returns the full list of Authorized App Keys
         /// </summary>
         /// <returns></returns>
-        public static HashSet<Guid> GetAuthorizedAppKeys()
+        private static HashSet<Guid> GetAuthorizedAppKeys()
         {
             _logViewerLocker.EnterReadLock();
             try
@@ -322,9 +344,139 @@ namespace Timelog.Server.Viewers
             {
                 _logViewerLocker.ExitReadLock();
             }
-
-
         }
+
+        #endregion
+
+        //Public Methods
+        public static List<LogViewer> CloneCurrentLogViewers()
+        {
+            _logViewerLocker.EnterReadLock();
+            try
+            {
+                return _logViewers[_logViewerCurrentIndex].ToList();
+            }
+            finally
+            {
+                LogViewersDirty = false;
+                _logViewerLocker.ExitReadLock();
+            }
+        }
+
+        #region Main Flushing Thread
+
+        public static void Pulse()
+        {
+            lock (_flushingThreadLock)
+            {
+                Monitor.Pulse(_flushingThreadLock);
+            }
+        }
+
+        /// <summary>
+        /// The main flushing thread that periodically flushes the log files
+        /// </summary>
+        private static void FlushingThread(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                lock (_flushingThreadLock)
+                {
+                    _logger.LogDebug("LogFileManager FlushingThread waked up"); //Might produce too many logs without interest
+                    SendLogsToViewers();
+                    Monitor.Wait(_flushingThreadLock, _configuration.FlushTimeSeconds * 1000);
+                }
+            }
+        }
+
+        /// <summary>
+        /// This method is used to send logs to viewers periodically.
+        /// It calculates the fromIndex by taking the modulus of lastIndexDumpedtofile and the length of ReceivedDataQueue items.
+        /// If the currentIndex is greater than or equal to fromIndex, it means we are still in the same round robin cycle.
+        /// In this case, it loads the new entries from fromIndex to currentIndex.
+        /// If the currentIndex is less than fromIndex, it means we are in the next round robin cycle.
+        /// In this case, it loads the new entries to the log file from fromIndex to the end and from the start to currentIndex.
+        /// Aftewards, each log message will be placed on a package for each report viewer that has the corresponding bit set in the filter bitmask.
+        /// Finnally a server TCP message is sent to each log viewer with the package of log messages that are relevant to them.
+        /// </summary>
+        /// <param name="currentIndex">The current index in the round robin cycle.</param>
+        /// <param name="lastIndexDumpedtofile">The last index that was dumped to the file.</param>
+        private static void SendLogsToViewers()
+        {
+            var queueSnapshot = _receivedDataQueue.GetSnapshot();
+
+            int currentIndex = queueSnapshot.CurrentIndex;
+            int fromIndex = LastDumpToViewersIndex % queueSnapshot.LogMessages.Length;            
+
+            //If no valid messages
+            if (!queueSnapshot.LogMessages.Any(clm => clm.ApplicationKey != Guid.Empty))
+            {
+                LastDumpToViewersIndex = currentIndex;
+                return;
+            }
+
+            _logger.LogInformation($"Will dump from Index {fromIndex} to {currentIndex}");
+
+            List<LogMessage> logsToSend = new List<LogMessage>(); 
+            if (currentIndex >= fromIndex)
+            {
+                // still in the same round robin cycle
+
+                //dump the new  entries to the log file
+                logsToSend.AddRange(queueSnapshot.LogMessages.ToArray()[fromIndex..currentIndex]);
+            }
+            else if (currentIndex < fromIndex)
+            {
+                // we are in the round robin cycle
+
+                //dump the new  entries to the log file
+                logsToSend.AddRange(queueSnapshot.LogMessages.ToArray()[fromIndex..]);
+                logsToSend.AddRange(queueSnapshot.LogMessages.ToArray()[0..currentIndex]);
+            }
+
+            Dictionary<Guid, List<LogMessage>> logsToSendByViewer = new Dictionary<Guid, List<LogMessage>>();
+            foreach(var logMessage in logsToSend)
+            {
+                var reportViewers = GetReportViewersForBitmask(logMessage.FilterBitmask);
+                foreach(var reportViewer in reportViewers)
+                {
+                    if (!logsToSendByViewer.ContainsKey(reportViewer))
+                    {
+                        logsToSendByViewer[reportViewer] = new List<LogMessage>();
+                    }
+                    logsToSendByViewer[reportViewer].Add(logMessage);
+                }
+            }
+
+            foreach(var viewer in logsToSendByViewer)
+            {
+                _server.SendMessage(viewer.Key, System.Text.Json.JsonSerializer.Serialize(viewer.Value, includeFieldsJsonSerializerOptions), new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.LogMessages } });
+            }
+
+            LastDumpToViewersIndex = currentIndex;
+        }
+
+        private static Dictionary<long, List<Guid>> BitSetPositionsCache = new Dictionary<long, List<Guid>>();
+        private static List<Guid> GetReportViewersForBitmask(long bitmask)
+        {
+            if (BitSetPositionsCache.ContainsKey(bitmask)) { return BitSetPositionsCache[bitmask];}
+
+            List<Guid> viewers = new List<Guid>();
+            int position = 0; //Start from the least significant bit (LSB)
+            while(bitmask > 0)
+            {
+                if((bitmask & 1)== 1) //Check it the LSB is set
+                {
+                    viewers.Add(_logViewers[0][position].ApplicationKey);
+                }
+                position++;
+                bitmask >>= 1; //Shift the bits to the right
+            }
+            BitSetPositionsCache[bitmask] = viewers;
+            return BitSetPositionsCache[bitmask];
+        }
+
+        #endregion
     }
 
     public class ViewersServerConfiguration
@@ -345,5 +497,15 @@ namespace Timelog.Server.Viewers
         public List<Guid> AuthorizedAppKeysDirect { get; set; }
 
         public WatsonTcpServerConfiguration WatsonTcpServerConfiguration { get; set; }
+
+        /// <summary>
+        /// Frequency to flush the log entries back to the viewers
+        /// </summary>
+        public int FlushTimeSeconds { get; set; } = 1;
+
+        /// <summary>
+        /// The number of entries that force a flush to the viewers. Default is 5000.
+        /// </summary>
+        public int FlushItemsSize { get; set; } = 5000;
     }
 }

@@ -53,7 +53,7 @@ namespace Timelog.Viewer
         /// <summary>
         /// Handles a TCP operation. As the TCP communication is handled by the TCPClientWrapper this class shall only handle business logic
         /// </summary>
-        private static void OnTimelogTCPOperation(TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters)
+        private static void OnTimelogTCPOperation(TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters, List<LogMessage> logMessages)
         {
             switch (operation)
             {

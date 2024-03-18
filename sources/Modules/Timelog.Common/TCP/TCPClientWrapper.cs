@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Timelog.Common.Models;
 using WatsonTcp;
@@ -31,6 +32,9 @@ namespace Timelog.Common.TCP
 
         /// <summary>Logger to use</summary>
         private static ILogger _logger;
+
+        /// <summary>Static JsonSerializerOptions to be reused</summary>
+        private static JsonSerializerOptions includeFieldsJsonSerializerOptions = new JsonSerializerOptions { IncludeFields = true };
 
         //Public Events
         /// <summary>
@@ -117,7 +121,7 @@ namespace Timelog.Common.TCP
         private void OnTcpServerConnected(object sender, ConnectionEventArgs e)
         {
             _logger?.LogInformation($"TCP Client '{_configuration.Name}...' connected to {_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}.");
-            OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, _applicationKey, null);
+            OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, _applicationKey, null, null);
         }
 
         /// <summary>
@@ -126,7 +130,7 @@ namespace Timelog.Common.TCP
         private void OnTcpServerDisconnected(object sender, DisconnectionEventArgs e)
         {
             _logger?.LogInformation($"TCP Client '{_configuration.Name}...' disconnected from {_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}.");
-            OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, _applicationKey, null);
+            OnTimelogTCPOperation?.Invoke(TimelogTCPOperation.Connect, _applicationKey, null, null);
         }
 
         /// <summary>
@@ -148,13 +152,13 @@ namespace Timelog.Common.TCP
                 //No operation, just log the message
                 case TimelogTCPOperation.None:
                     _logger?.LogInformation($"Nop message from server at '{_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}': '{Encoding.UTF8.GetString(e.Data)}'");
-                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, null);
+                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, null, null);
                     break;
 
                 //Ping operation, just log the message
                 case TimelogTCPOperation.Ping:
                     _logger?.LogInformation($"Ping message from server at '{_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}': '{Encoding.UTF8.GetString(e.Data)}'");
-                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, null);
+                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, null, null);
                     break;
 
                 //Current Filter parse the filter and log it
@@ -164,7 +168,17 @@ namespace Timelog.Common.TCP
                     var filter = System.Text.Json.JsonSerializer.Deserialize<FilterCriteria>(filterStr);
 
                     //Do anything with the filter?
-                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, new List<FilterCriteria>() { filter });
+                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, new List<FilterCriteria>() { filter }, null);
+                    break;
+
+                //Received some log messages
+                case TimelogTCPOperation.LogMessages:
+                    var logMessagesStr = Encoding.UTF8.GetString(e.Data);
+                    var logMessages = System.Text.Json.JsonSerializer.Deserialize<List<LogMessage>>(logMessagesStr, includeFieldsJsonSerializerOptions);
+
+                    _logger?.LogInformation($"Receiving {logMessages.Count} log messages from server at '{_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}'");
+
+                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, null, logMessages);
                     break;
 
                 //Fallback scenario, log the message

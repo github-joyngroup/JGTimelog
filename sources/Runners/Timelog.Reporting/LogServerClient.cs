@@ -57,7 +57,7 @@ namespace Timelog.Reporting
         /// <summary>
         /// Handles a TCP operation. As the TCP communication is handled by the TCPClientWrapper this class shall only handle business logic
         /// </summary>
-        private static void OnTimelogTCPOperation(TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters)
+        private static void OnTimelogTCPOperation(TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters, List<LogMessage> logMessages)
         {
             switch (operation)
             {
@@ -67,6 +67,9 @@ namespace Timelog.Reporting
                     _client.SetFilter(ViewerFiltersHandler.ListFilters());
                     break;
 
+                case TimelogTCPOperation.LogMessages:
+                    _logger?.LogInformation($"Received {logMessages.Count} from the Timelog Server with Guid: {clientGuid}");
+                    break;
                 default:
                     _logger?.LogDebug($"Operation not implemented: {operation.ToString()}");
                     break;
