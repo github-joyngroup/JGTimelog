@@ -74,7 +74,7 @@ namespace Timelog.Reporting
 
                 case TimelogTCPOperation.GetFilter:
                     var filter = ViewerFiltersHandler.GetFilter(clientGuid);
-                    _server.SendMessage(clientGuid, System.Text.Json.JsonSerializer.Serialize(filter), new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.CurrentFilter } });
+                    _server.SendCurrentFilter(clientGuid, new List<FilterCriteria>() { filter });
                     break;
 
                 default:
@@ -83,9 +83,20 @@ namespace Timelog.Reporting
             }
         }
 
+        /// <summary>
+        /// Sends a string message to every connected client
+        /// </summary>
         public static void BroadcastMessage(string message)
         {
-            _server.BroadcastMessage(message, new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.None } });
+            _server.BroadcastMessage(message);
+        }
+
+        /// <summary>
+        /// sends a list of log messages to a specific client
+        /// </summary>
+        public static void SendLogMessages(Guid viewerGuid, List<LogMessage> logMessages)
+        {
+            _server.SendLogMessages(viewerGuid, logMessages);
         }
 
         public static List<string> ListClients()

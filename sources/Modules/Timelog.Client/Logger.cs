@@ -9,14 +9,31 @@ namespace Timelog.Client
 {
     public static class Logger
     {
-        private static UdpClient udpClient;
+        /// <summary>
+        /// The unique application key to be used in the TCP communication
+        /// </summary>
+        private static Guid _applicationKey; 
+
+        /// <summary>
+        /// The logger instance
+        /// </summary>
         private static ILogger _logger;
+
+        /// <summary>
+        /// The configuration of the logger
+        /// </summary>
         private static LoggerConfiguration _configuration;
 
-        public static void Startup(LoggerConfiguration configuration, ILogger logger)
+        /// <summary>
+        /// Socket UDP to use for logging
+        /// </summary>
+        private static UdpClient udpClient;
+
+        public static void Startup(Guid applicationKey, LoggerConfiguration configuration, ILogger logger)
         {
             _configuration = configuration;
             _logger = logger;
+            _applicationKey = applicationKey;
 
             udpClient = new UdpClient();
             udpClient.Connect(_configuration.TimelogServerHost, _configuration.TimelogServerPort);
@@ -24,23 +41,70 @@ namespace Timelog.Client
             _logger?.LogInformation($"Timelog.Client...' is ready to log to the server {_configuration.TimelogServerHost}:{_configuration.TimelogServerPort}.");
         }
 
-        // Existing Log method
-        public static void Log(LogLevel logLevel, LogMessage message)
+        //Log Methods
+        public static void Log(LogLevel logLevel, int domain, Guid transactionId, long? clientTag = null)
         {
-            byte[] logBytes = ByteSerializer<LogMessage>.Serialize(message);
+            LogMessage logMessage = new LogMessage()
+            {
+                Domain = domain,
+                ClientLogLevel = (int)logLevel,
+                ClientTag = clientTag ?? 0,
+                TransactionID = transactionId,
+                Command = Commands.Normal,
+                OriginTimestamp = _configuration.UseClientTimestamp ? DateTime.UtcNow : null
+            };
 
+            Log(logMessage);
+        }
+
+
+        public static LogMessage LogStart(LogLevel logLevel, int domain, Guid transactionId, long? clientTag = null)
+        {
+            LogMessage logMessage = new LogMessage()
+            {
+                Domain = domain,
+                ClientLogLevel = (int)logLevel,
+                ClientTag = clientTag ?? 0,
+                TransactionID = transactionId,
+                Command = Commands.Start,
+                OriginTimestamp = DateTime.UtcNow
+            };
+
+            return Log(logMessage);
+        }
+
+        public static void LogStop(LogMessage startLogMessage)
+        {
+            LogMessage logMessage = new LogMessage()
+            {
+                Domain = startLogMessage.Domain,
+                ClientLogLevel = startLogMessage.ClientLogLevel,
+                ClientTag = startLogMessage.ClientTag,
+                TransactionID = startLogMessage.TransactionID,
+                Command = Commands.Stop,
+                OriginTimestamp = DateTime.UtcNow,
+                ExecutionTime = DateTime.UtcNow - startLogMessage.OriginTimestamp
+            };
+
+            Log(logMessage);
+        }
+
+        /// <summary>
+        /// Sends the LogMessage to the UDP channel
+        /// </summary>
+        private static LogMessage Log(LogMessage message)
+        {
+            message.ApplicationKey = _applicationKey;
+            byte[] logBytes = ProtoBufSerializer.Serialize(message);
             try
             {
                 udpClient.Send(logBytes, logBytes.Length);
-
-                //if(logBytes.Length > 1500)
-                //{
-                //    _logger?.LogWarning($"Timelog.Client '{ClientConfiguration.ApplicationKey.ToString()[..4]}...' sent a log message that is larger than 1500 bytes. This may cause fragmentation and performance issues.");
-                //}
             }
             catch
             {
             }
+
+            return message;
         }
     }
 

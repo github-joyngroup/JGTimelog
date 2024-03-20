@@ -81,9 +81,6 @@ namespace Timelog.Server.Viewers
         /// </summary>
         private static object _flushingThreadLock = new();
 
-        /// <summary>Static JsonSerializerOptions to be reused</summary>
-        private static JsonSerializerOptions includeFieldsJsonSerializerOptions = new JsonSerializerOptions { IncludeFields = true };
-
         //Methods
 
         /// <summary>
@@ -164,7 +161,7 @@ namespace Timelog.Server.Viewers
 
                 case TimelogTCPOperation.GetFilter:
                     var currentFilters = GetFilters(clientGuid);
-                    _server.SendMessage(clientGuid, System.Text.Json.JsonSerializer.Serialize(currentFilters), new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.CurrentFilter } });
+                    _server.SendCurrentFilter(clientGuid, currentFilters);
                     break;
 
                 default:
@@ -415,7 +412,7 @@ namespace Timelog.Server.Viewers
                 return;
             }
 
-            _logger.LogInformation($"Will dump from Index {fromIndex} to {currentIndex}");
+            _logger.LogInformation($"Will send to viewers from Index {fromIndex} to {currentIndex}");
 
             List<LogMessage> logsToSend = new List<LogMessage>(); 
             if (currentIndex >= fromIndex)
@@ -450,19 +447,21 @@ namespace Timelog.Server.Viewers
 
             foreach(var viewer in logsToSendByViewer)
             {
-                _server.SendMessage(viewer.Key, System.Text.Json.JsonSerializer.Serialize(viewer.Value, includeFieldsJsonSerializerOptions), new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.LogMessages } });
+                _server.SendLogMessages(viewer.Key, viewer.Value);
             }
 
-            LastDumpToViewersIndex = currentIndex;
+            //Update the last dump to file index with the current index
+            LastDumpToViewersIndex = currentIndex + 1;
         }
 
         private static Dictionary<long, List<Guid>> BitSetPositionsCache = new Dictionary<long, List<Guid>>();
-        private static List<Guid> GetReportViewersForBitmask(long bitmask)
+        private static List<Guid> GetReportViewersForBitmask(long originalBitmask)
         {
-            if (BitSetPositionsCache.ContainsKey(bitmask)) { return BitSetPositionsCache[bitmask];}
+            if (BitSetPositionsCache.ContainsKey(originalBitmask)) { return BitSetPositionsCache[originalBitmask];}
 
             List<Guid> viewers = new List<Guid>();
             int position = 0; //Start from the least significant bit (LSB)
+            long bitmask = originalBitmask;
             while(bitmask > 0)
             {
                 if((bitmask & 1)== 1) //Check it the LSB is set
@@ -472,8 +471,8 @@ namespace Timelog.Server.Viewers
                 position++;
                 bitmask >>= 1; //Shift the bits to the right
             }
-            BitSetPositionsCache[bitmask] = viewers;
-            return BitSetPositionsCache[bitmask];
+            BitSetPositionsCache[originalBitmask] = viewers;
+            return BitSetPositionsCache[originalBitmask];
         }
 
         #endregion

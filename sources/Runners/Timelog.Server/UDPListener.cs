@@ -169,11 +169,11 @@ namespace Timelog.Server
                     }
                     //Receive the data from the UDP port
                     var receivedData = _server?.Receive(ref _clientEndPoint);
-                    
+
                     if (receivedData is null) { continue; }
 
                     //Deserialize the received data
-                    var receivedLogMessage = ByteSerializer<LogMessage>.Deserialize(receivedData);
+                    var receivedLogMessage = ProtoBufSerializer.Deserialize<LogMessage>(receivedData);
                     //var receivedLogMessage = BinaronSerializer<LogMessage>.Deserialize(receivedData);
 
                     //Check if the application key is authorized - if not, ignore the message by continuing the loop
@@ -183,12 +183,15 @@ namespace Timelog.Server
                     receivedLogMessage.TimeServerTimeStamp = DateTime.UtcNow;
 
                     //Flag filters interested in the message
-                    foreach(var logViewer in currentLogViewers)
+                    foreach (var logViewer in currentLogViewers)
                     {
                         if (logViewer.Filters != null && logViewer.Filters.Any())
                         {
                             foreach (var filter in logViewer.Filters)
                             {
+                                //if Filter State is not ON, continue
+                                if(filter.State != FilterCriteriaState.On) { continue; }
+
                                 if (filter.Matches(receivedLogMessage))
                                 {
                                     receivedLogMessage.FilterBitmask |= logViewer.Bitmask;
@@ -213,21 +216,6 @@ namespace Timelog.Server
                     {
                         ViewersServer.Pulse();
                     }
-
-                    //    ForceFlushToDisk = false;
-                    //    int auxLidf = LastDumpToFileIndex;
-                    //    //int auxCidx = ReceivedDataQueue.CurrentIndex-1;
-                    //    Task.Run(() => LogFileManager?.DumpFilesPeriodically(auxCidx, auxLidf));
-
-                    //    LastDumpToFileIndex = ReceivedDataQueue.CurrentIndex;
-                    //    LastDumpToFileMoment = receivedLogMessage.TimeServerTimeStamp;
-                    //    ForceFlushToDisk = false;
-                    //}
-                    //Used in debug to make sure messages are incoming
-                    //if (ReceivedDataQueue.CurrentIndex % 50000 == 0)
-                    //{
-                    //    _logger.LogInformation($"CurrentIndex: {ReceivedDataQueue.CurrentIndex}");
-                    //}
                 }
                 catch (Exception e)
                 {
@@ -277,7 +265,7 @@ namespace Timelog.Server
     public class UDPListenerCacheConfiguration
     {
         /// <summary>
-        /// The number of entries to be accepted on the global internal cache. Default is 1000000.
+        /// The number of entries to be accepted on the global internal cache. Default is 1000000 (1 Million).
         /// </summary>
         public int InternalCacheMaxEntries { get; set; } = 1000000;
     }

@@ -133,8 +133,7 @@ namespace Timelog.Common.TCP
                 //Set Filter message, parse the filter and bubble up to OnTimeLogTCPOperation
                 case TimelogTCPOperation.SetFilter:
                     _logger?.LogInformation($"{e.Client.ToString()} is setting it's filter");
-                    var filterStr = Encoding.UTF8.GetString(e.Data);
-                    var filter = System.Text.Json.JsonSerializer.Deserialize<List<FilterCriteria>>(filterStr);
+                    var filter = ProtoBufSerializer.Deserialize<List<FilterCriteria>>(e.Data);
 
                     OnTimelogTCPOperation?.Invoke(operation, e.Client.Guid, filter, null);
 
@@ -157,8 +156,9 @@ namespace Timelog.Common.TCP
         /// <summary>
         /// Broadcasts a message to all clients
         /// </summary>
-        public void BroadcastMessage(string message, Dictionary<string, object> metadata)
+        public void BroadcastMessage(string message)
         {
+            var metadata = new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.None } };
             foreach (var client in _server.ListClients())
             {
                 _server.SendAsync(client.Guid, message, metadata);
@@ -171,6 +171,22 @@ namespace Timelog.Common.TCP
         public void SendMessage(Guid clientGuid, string message, Dictionary<string, object> metadata)
         {
             _server.SendAsync(clientGuid, message, metadata);
+        }
+
+        /// <summary>
+        /// Sends the current filter to a specific client
+        /// </summary>
+        public void SendCurrentFilter(Guid clientGuid, List<FilterCriteria> filters)
+        {
+            _server.SendAsync(clientGuid, ProtoBufSerializer.Serialize(filters), new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.CurrentFilter } });
+        }
+
+        /// <summary>
+        /// Sends a list of log messages to a specific client
+        /// </summary>
+        public void SendLogMessages(Guid clientGuid, List<LogMessage> logMessages)
+        {
+            _server.SendAsync(clientGuid, ProtoBufSerializer.Serialize(logMessages), new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.LogMessages } });
         }
 
         /// <summary>Returns all currenc connected clients</summary>

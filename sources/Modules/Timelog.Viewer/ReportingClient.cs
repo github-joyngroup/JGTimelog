@@ -16,14 +16,17 @@ namespace Timelog.Viewer
         private static ReportingClientConfiguration _configuration;
         private static TCPClientWrapper _client;
 
+        public static event OnLogMessagesReceivedHandler OnLogMessagesReceived;
         /// <summary>
         /// Starts the TimeLogReportingServerDriver based on the configuration. Will setup the Server host and port, and wire up the several TCP events
         /// </summary>
-        public static void Startup(Guid applicationKey, ReportingClientConfiguration configuration, ILogger logger)
+        public static void Startup(Guid applicationKey, ReportingClientConfiguration configuration, ILogger logger, OnLogMessagesReceivedHandler onLogMessagesReceived)
         {
             _applicationKey = applicationKey;
             _configuration = configuration;
             _logger = logger;
+
+            OnLogMessagesReceived += onLogMessagesReceived;
 
             _client = new TCPClientWrapper();
             _client.Startup(_applicationKey, _configuration.WatsonTCPClientConfiguration, logger, OnTimelogTCPOperation);
@@ -59,6 +62,11 @@ namespace Timelog.Viewer
             {
                 case TimelogTCPOperation.CurrentFilter:
                     _logger?.LogInformation("My current filter is: " + System.Text.Json.JsonSerializer.Serialize(filters.First()));
+                    break;
+
+                case TimelogTCPOperation.LogMessages:
+                    _logger?.LogDebug($"Received {logMessages.Count} from the Reporting Server");
+                    OnLogMessagesReceived?.Invoke(logMessages);
                     break;
 
                 default:

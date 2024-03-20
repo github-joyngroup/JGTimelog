@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Timelog.Common;
 using Timelog.Common.Models;
 using Timelog.Common.TCP;
 using WatsonTcp;
@@ -69,6 +70,7 @@ namespace Timelog.Reporting
 
                 case TimelogTCPOperation.LogMessages:
                     _logger?.LogInformation($"Received {logMessages.Count} from the Timelog Server with Guid: {clientGuid}");
+                    ViewerFiltersHandler.SendLogMessages(logMessages);
                     break;
                 default:
                     _logger?.LogDebug($"Operation not implemented: {operation.ToString()}");
@@ -81,8 +83,23 @@ namespace Timelog.Reporting
         /// </summary>
         /// <param name="currentFilters"></param>
         /// <exception cref="NotImplementedException"></exception>
-        private static void ViewerFiltersHandler_OnViewerFiltersChanged(Dictionary<Guid, FilterCriteria> currentFilters)
+        private static void ViewerFiltersHandler_OnViewerFiltersChanged(Guid changedViewer, Dictionary<Guid, FilterCriteria> currentFilters)
         {
+            FilterCriteria changedViewerFilter = null;
+            if (currentFilters.TryGetValue(changedViewer, out changedViewerFilter))
+            {
+                if(changedViewerFilter.State == FilterCriteriaState.Search && !String.IsNullOrWhiteSpace(_configuration.TimelogServerLogFileDirectory))
+                {
+                    //Async call to the File system to get the log messages that match the filter
+                    Task.Run(() =>
+                    {
+                        var logMessages = LogMessageFileHandler.SearchLogFiles(changedViewerFilter, _configuration.TimelogServerLogFileDirectory);
+                        ViewerServer.SendLogMessages(changedViewer, logMessages);
+                    });
+                }
+            }
+
+            //Update the server with the new filters
             _client.SetFilter(currentFilters.Values.ToList());
         }
     }
@@ -90,5 +107,7 @@ namespace Timelog.Reporting
     internal class LogServerClientConfiguration
     {
         public WatsonTcpClientConfiguration WatsonTCPClientConfiguration { get; set; }
+
+        public string TimelogServerLogFileDirectory { get; set; }
     }
 }

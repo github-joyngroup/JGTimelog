@@ -33,9 +33,6 @@ namespace Timelog.Common.TCP
         /// <summary>Logger to use</summary>
         private static ILogger _logger;
 
-        /// <summary>Static JsonSerializerOptions to be reused</summary>
-        private static JsonSerializerOptions includeFieldsJsonSerializerOptions = new JsonSerializerOptions { IncludeFields = true };
-
         //Public Events
         /// <summary>
         /// Will be triggered when a operation is received from the server
@@ -95,7 +92,7 @@ namespace Timelog.Common.TCP
                     else
                     {
                         //Send Ping to server
-                        SendMessage("Ping", new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.Ping } });
+                        SendPing();
                         Task.Delay(_configuration.CheckConnectionHealthFrequency, stoppingToken).Wait();
                     }
                 }
@@ -163,20 +160,17 @@ namespace Timelog.Common.TCP
 
                 //Current Filter parse the filter and log it
                 case TimelogTCPOperation.CurrentFilter:
-                    _logger?.LogInformation($"Receiving current filter from server at '{_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}': '{Encoding.UTF8.GetString(e.Data)}'");
-                    var filterStr = Encoding.UTF8.GetString(e.Data);
-                    var filter = System.Text.Json.JsonSerializer.Deserialize<FilterCriteria>(filterStr);
+                    _logger?.LogDebug($"Receiving current filter from server at '{_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}': '{Encoding.UTF8.GetString(e.Data)}'");
+                    var filter = ProtoBufSerializer.Deserialize<List<FilterCriteria>>(e.Data);
 
                     //Do anything with the filter?
-                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, new List<FilterCriteria>() { filter }, null);
+                    OnTimelogTCPOperation?.Invoke(operation, _applicationKey, filter, null);
                     break;
 
                 //Received some log messages
                 case TimelogTCPOperation.LogMessages:
-                    var logMessagesStr = Encoding.UTF8.GetString(e.Data);
-                    var logMessages = System.Text.Json.JsonSerializer.Deserialize<List<LogMessage>>(logMessagesStr, includeFieldsJsonSerializerOptions);
-
-                    _logger?.LogInformation($"Receiving {logMessages.Count} log messages from server at '{_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}'");
+                    var logMessages = ProtoBufSerializer.Deserialize<List<LogMessage>>(e.Data);
+                    _logger?.LogDebug($"Receiving {logMessages.Count} log messages from server at '{_configuration.TimelogReportingHost}:{_configuration.TimelogReportingPort}'");
 
                     OnTimelogTCPOperation?.Invoke(operation, _applicationKey, null, logMessages);
                     break;
@@ -197,8 +191,22 @@ namespace Timelog.Common.TCP
         /// </summary>
         private void SendMessage(string message, Dictionary<string, object> metadata)
         {
-            if (!_client.Connected) { throw new Exception("Client is not connected to Server. Correct and retry."); }
+            if (!_client.Connected) { _logger.LogError("Client is not connected to Server. Correct and retry."); }
             _client.SendAsync(message, metadata);
+        }
+
+        /// <summary>
+        /// Sends a message to the Timelog Reporting server
+        /// </summary>
+        private void SendMessage(byte[] message, Dictionary<string, object> metadata)
+        {
+            if (!_client.Connected) { _logger.LogError("Client is not connected to Server. Correct and retry."); return; }
+            _client.SendAsync(message, metadata);
+        }
+
+        public void SendPing()
+        {
+            SendMessage("Ping", new Dictionary<string, object>() { { Constants.TimelogTCPOperationKey, TimelogTCPOperation.Ping } });
         }
 
         /// <summary>
@@ -210,7 +218,7 @@ namespace Timelog.Common.TCP
             {
                 { Constants.TimelogTCPOperationKey, TimelogTCPOperation.SetFilter }
             };
-            SendMessage(System.Text.Json.JsonSerializer.Serialize(filterCriteria), metadata);
+            SendMessage(ProtoBufSerializer.Serialize(filterCriteria), metadata);
         }
 
         /// <summary>

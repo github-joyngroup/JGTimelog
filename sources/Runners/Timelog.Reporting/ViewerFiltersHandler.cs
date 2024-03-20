@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using NetEscapades.Extensions.Logging.RollingFile.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using Timelog.Common.Models;
 
 namespace Timelog.Reporting
 {
-    internal delegate void ViewerFiltersChangedHandler(Dictionary<Guid, FilterCriteria> currentFilters);
+    internal delegate void ViewerFiltersChangedHandler(Guid changedViewer, Dictionary<Guid, FilterCriteria> currentFilters);
 
     internal class ViewerFiltersHandler
     {
@@ -52,7 +53,7 @@ namespace Timelog.Reporting
                 viewerFilterCriteriasLock.ExitWriteLock();
             }
 
-            OnViewerFiltersChanged?.Invoke(viewerFilterCriterias);
+            OnViewerFiltersChanged?.Invoke(filter.ViewerGuid.Value, viewerFilterCriterias);
         }
 
         /// <summary>
@@ -80,7 +81,7 @@ namespace Timelog.Reporting
                 viewerFilterCriteriasLock.ExitWriteLock();
             }
 
-            OnViewerFiltersChanged?.Invoke(viewerFilterCriterias);
+            OnViewerFiltersChanged?.Invoke(viewerGuid, viewerFilterCriterias);
         }
 
         /// <summary>
@@ -115,6 +116,33 @@ namespace Timelog.Reporting
             try
             {
                 return viewerFilterCriterias.Values.ToList();
+            }
+            finally
+            {
+                viewerFilterCriteriasLock.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Produces a log package for each viewer, based on the received log messages and the viewer's filter
+        /// It will then forward those packages to the viewers using the ViewerServer
+        /// </summary>
+        /// <param name="logMessages"></param>
+        public static void SendLogMessages(List<Timelog.Common.Models.LogMessage> logMessages)
+        {
+            viewerFilterCriteriasLock.EnterReadLock();
+            try
+            {
+                Dictionary<Guid, List<Timelog.Common.Models.LogMessage>> viewerPackages =
+                    viewerFilterCriterias.ToDictionary(vfc => vfc.Key, vfc => logMessages.FindAll(lm => vfc.Value.Matches(lm)));
+
+                foreach (var viewerPackage in viewerPackages)
+                {
+                    if (viewerPackage.Value.Any())
+                    {
+                        ViewerServer.SendLogMessages(viewerPackage.Key, viewerPackage.Value);
+                    }
+                }
             }
             finally
             {

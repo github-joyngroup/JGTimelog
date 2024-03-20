@@ -75,20 +75,14 @@ namespace Timelog.Server
         /// <summary>
         /// Stream writer to write to the log file
         /// </summary>
-        private static StreamWriter? _writer;
+        private static FileStream? _writer;
 
         /// <summary>The cancellation token source to stop the listener - will be flagged on the stop method</summary>
         private static CancellationTokenSource StoppingCancelationTokenSource;
 
-        /// <summary>Static JsonSerializerOptions to be reused</summary>
-        private static JsonSerializerOptions includeFieldsJsonSerializerOptions = new JsonSerializerOptions{IncludeFields = true};
-
-
         //public Properties 
         /// <summary>Current File Dump index</summary>
         internal static int LastDumpToFileIndex { get; set; }
-        /// <summary>When did the last dump to file happened</summary>
-        internal static DateTime? LastDumpToFileMoment { get; set; } = DateTime.UtcNow;
 
         /// <summary>Getter for the Flush Items Size configuration</summary>
         internal static int FlushItemsSize { get { return _configuration.FlushItemsSize; } }
@@ -191,10 +185,11 @@ namespace Timelog.Server
         /// <summary>
         /// Opens a stream writter to write to the log file
         /// </summary>  
-        private static StreamWriter OpenStreamWriter(bool fileChanged)
+        private static FileStream OpenFileStream(bool fileChanged)
         {
             string filePath = GetFilePath();
-            return new StreamWriter(filePath, append: !fileChanged);
+            //return new StreamWriter(filePath, append: !fileChanged);
+            return new FileStream(filePath, fileChanged ? FileMode.Create : FileMode.Append, FileAccess.Write, FileShare.Read);
         }
 
         /// <summary>
@@ -215,7 +210,7 @@ namespace Timelog.Server
                 _entriesDumpedToFile = 0;
             }
 
-            _writer = OpenStreamWriter(fileChanged);
+            _writer = OpenFileStream(fileChanged);
         }
 
         /// <summary>
@@ -284,14 +279,13 @@ namespace Timelog.Server
             int currentIndex = queueSnapshot.CurrentIndex;
             int fromIndex = LastDumpToFileIndex % queueSnapshot.LogMessages.Length;
 
-            _logger.LogInformation($"Will dump from Index {fromIndex} to {currentIndex}");
+            _logger.LogInformation($"Will dump to log file from Index {fromIndex} to {currentIndex}");
 
             //If has valid messages
             if (!queueSnapshot.LogMessages.Any(clm => clm.ApplicationKey != Guid.Empty))
             {
                 LastDumpToFileIndex = currentIndex;
                 return;
-
             }
 
             if (currentIndex >= fromIndex)
@@ -310,7 +304,9 @@ namespace Timelog.Server
                 DumpToFile(queueSnapshot.LogMessages.ToArray()[0..currentIndex]);
             }
 
-            LastDumpToFileIndex = currentIndex;
+            _writer.Flush();
+            //Update the last dump to file index with the current index
+            LastDumpToFileIndex = currentIndex +1;
         }
 
         /// <summary>
@@ -324,8 +320,9 @@ namespace Timelog.Server
                 foreach (var entry in buffer)
                 {
                     //Do not log empty entries
-                    if(entry.ApplicationKey == Guid.Empty) { continue; }    
-                    _writer?.WriteLine(System.Text.Json.JsonSerializer.Serialize(entry, includeFieldsJsonSerializerOptions));
+                    if(entry.ApplicationKey == Guid.Empty) { continue; }
+                    LogMessageFileHandler.WriteLogEntry(_writer, entry);
+                    //_writer?.WriteLine(System.Text.Json.JsonSerializer.Serialize(entry));
                     _entriesDumpedToFile++;
 
                     if (RoundRobinFileEntries())
@@ -333,9 +330,6 @@ namespace Timelog.Server
                         OpenNextStreamWriter();
                     }
                 }
-                
-                //Update the last dump to file moment
-                LastDumpToFileMoment = DateTime.UtcNow;
             }
             catch (Exception ex)
             {

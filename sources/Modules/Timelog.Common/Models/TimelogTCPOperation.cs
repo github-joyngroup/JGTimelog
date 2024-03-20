@@ -32,4 +32,5 @@ namespace Timelog.Common.Models
     }
 
     public delegate void OnTimelogTCPOperationHandler (TimelogTCPOperation operation, Guid clientGuid, List<FilterCriteria> filters, List<LogMessage> logMessages);
+    public delegate void OnLogMessagesReceivedHandler(List<LogMessage> logMessages);
 }
