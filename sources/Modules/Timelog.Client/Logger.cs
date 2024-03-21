@@ -29,6 +29,9 @@ namespace Timelog.Client
         /// </summary>
         private static UdpClient udpClient;
 
+        /// <summary>
+        /// Starts the Timelog.Client based on the configuration and the application key
+        /// </summary>
         public static void Startup(Guid applicationKey, LoggerConfiguration configuration, ILogger logger)
         {
             _configuration = configuration;
@@ -41,7 +44,9 @@ namespace Timelog.Client
             _logger?.LogInformation($"Timelog.Client...' is ready to log to the server {_configuration.TimelogServerHost}:{_configuration.TimelogServerPort}.");
         }
 
-        //Log Methods
+        ///<summary>
+        /// Creates and sends a log message to the server, will use the Normal command as the default one
+        /// </summary>
         public static void Log(LogLevel logLevel, uint domain, Guid transactionId, long? clientTag = null)
         {
             LogMessage logMessage = new LogMessage()
@@ -57,7 +62,9 @@ namespace Timelog.Client
             Log(logMessage);
         }
 
-
+        /// <summary>
+        /// Will create a log message with the Start command and send it to the server, the log message will be returned to be used in the corresponding Stop Command
+        /// </summary>
         public static LogMessage LogStart(LogLevel logLevel, uint domain, Guid transactionId, long? clientTag = null)
         {
             LogMessage logMessage = new LogMessage()
@@ -73,6 +80,9 @@ namespace Timelog.Client
             return Log(logMessage);
         }
 
+        /// <summary>
+        /// Will create a stop message based on the start message and send it to the server
+        /// </summary>
         public static void LogStop(LogMessage startLogMessage, long? clientTag = null)
         {
             LogMessage logMessage = new LogMessage()
@@ -108,6 +118,9 @@ namespace Timelog.Client
         }
     }
 
+    /// <summary>
+    /// Configuration for the Logger module
+    /// </summary>
     public class LoggerConfiguration
     {
         /// <summary>
@@ -119,11 +132,6 @@ namespace Timelog.Client
         /// The Timelog server network port number
         /// </summary>
         public int TimelogServerPort { get; set; }
-
-        /// <summary>
-        /// The Timelog level
-        /// </summary>
-        public LogLevel LogLevel { get; set; }
 
         /// <summary>
         /// Client Timestamp
