@@ -8,10 +8,10 @@ namespace Timelog.LogClientTester
 {
     internal class TimelogDomains
     {
-        internal static int AssetGateway { get; }                       = 0x01000000;
-        internal static int AssetGatewayDokRouter { get; }              = 0x01010000;
-        internal static int AssetGatewayDokRouterInitPipeline { get; }  = 0x01010100;
-        internal static int AssetGatewayDokRouterExecutePipeline { get; } = 0x01010200;
-        internal static int AssetGatewayDokRouterTickPipeline { get; }  = 0x01010300;
+        internal static uint AssetGateway { get; }                           = 0x01000000; // 16 777 216
+        internal static uint AssetGatewayDokRouter { get; }                  = 0x01010000; // 16 842 752
+        internal static uint AssetGatewayDokRouterInitPipeline { get; }      = 0x01010100; // 16 843 008
+        internal static uint AssetGatewayDokRouterExecutePipeline { get; }   = 0x01010200; // 16 843 264
+        internal static uint AssetGatewayDokRouterTickPipeline { get; }      = 0x01010300; // 16 843 520
     }
 }

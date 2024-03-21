@@ -451,7 +451,7 @@ namespace Timelog.Server.Viewers
             }
 
             //Update the last dump to file index with the current index
-            LastDumpToViewersIndex = currentIndex + 1;
+            LastDumpToViewersIndex = currentIndex;
         }
 
         private static Dictionary<long, List<Guid>> BitSetPositionsCache = new Dictionary<long, List<Guid>>();
@@ -500,11 +500,11 @@ namespace Timelog.Server.Viewers
         /// <summary>
         /// Frequency to flush the log entries back to the viewers
         /// </summary>
-        public int FlushTimeSeconds { get; set; } = 1;
+        public int FlushTimeSeconds { get; set; } = 10;
 
         /// <summary>
         /// The number of entries that force a flush to the viewers. Default is 5000.
         /// </summary>
-        public int FlushItemsSize { get; set; } = 5000;
+        public int FlushItemsSize { get; set; } = 50;
     }
 }

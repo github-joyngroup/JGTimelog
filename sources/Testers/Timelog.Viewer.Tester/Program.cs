@@ -73,26 +73,26 @@ do
     {
         currentFilter.StateCode = (int)FilterCriteriaState.On;
         Timelog.Viewer.ReportingClient.SetFilter(currentFilter);
+        Console.WriteLine($"Started real-time filtering...");
     }
     else if (readConsole == "stop")
     {
         currentFilter.StateCode = (int)FilterCriteriaState.Paused;
         Timelog.Viewer.ReportingClient.SetFilter(currentFilter);
+        Console.WriteLine($"Stopped real-time filtering");
     }
     else if (readConsole == "search")
     {
         currentFilter.StateCode = (int)FilterCriteriaState.Search;
         Timelog.Viewer.ReportingClient.SetFilter(currentFilter);
+        Console.WriteLine($"Applied Search Filter");
     }
-    else if (readConsole.Contains(" "))
+    else if (readConsole.Contains("="))
     {
-        var parts = readConsole.Split(' ');
-        if (parts.Length == 2)
-        {
-            var field = parts[0];
-            var value = parts[1];
-            HelperViewer.SetFilter(currentFilter, field, value);
-        }
+        var parts = readConsole.Split('=');
+        var field = parts[0];
+        var value = parts[1];
+        HelperViewer.SetFilter(currentFilter, field, value);
     }
 
     else if (readConsole.ToLower().Trim() == "help" || readConsole.ToLower().Trim() == "h") { HelperViewer.WriteInstructions(); }
@@ -128,7 +128,8 @@ static class HelperViewer
         Console.Clear();
         Console.WriteLine("Write Command to Send to Server");
         Console.WriteLine("show = Show current filter");
-        Console.WriteLine("<field> <value> = set filter field value");
+        Console.WriteLine("<field> = <value> = set filter field value");
+        Console.WriteLine("<field> = clear filter field value");
         Console.WriteLine("start = starts real time logging");
         Console.WriteLine("stop = stops real time logging");
         Console.WriteLine("search = performs search logging");
@@ -136,8 +137,7 @@ static class HelperViewer
         
         Console.WriteLine("Press Enter to send...");
         Console.WriteLine("An empty string will terminate the program.");
-        Console.WriteLine();
-        Console.Write("Valid fields to be set are: (ApplicationKey, DomainMask, MaxLogLevelClient, TransactionID, CommandMask, BeginServerTimestamp, EndServerTimestamp)");
+        Console.WriteLine("Valid fields to be set are: (ApplicationKey, BaseDomain, Domain or DomainMask, MaxLogLevelClient, TransactionID, Command or CommandMask, BeginServerTimestamp, EndServerTimestamp)");
         Console.WriteLine();
     }
 
@@ -146,27 +146,60 @@ static class HelperViewer
         switch (field.ToLower().Trim())
         {
             case "applicationkey":
-                filter.ApplicationKey = Guid.Parse(value);
+                if (String.IsNullOrWhiteSpace(value)) { filter.ApplicationKey = null; }
+                else if(Guid.TryParse(value, out Guid applicationKey))
+                { filter.ApplicationKey = applicationKey; }
+                Console.WriteLine($"Set ApplicationKey to: {filter.ApplicationKey}");
                 break;
+            case "basedomain":
+                if (String.IsNullOrWhiteSpace(value)) { filter.BaseDomain = null; }
+                else if(uint.TryParse(value, out uint baseDomain))
+                { filter.BaseDomain = baseDomain; }
+                Console.WriteLine($"Set BaseDomain to: {filter.BaseDomain}");
+                break;
+            case "domain":
             case "domainmask":
-                filter.DomainMask = int.Parse(value);
+                if (String.IsNullOrWhiteSpace(value)) { filter.DomainMask = null; }
+                else if(uint.TryParse(value, out uint domainMask))
+                { filter.DomainMask = domainMask; }
+                Console.WriteLine($"Set Domain Mask to: {filter.DomainMask}");
                 break;
             case "maxloglevelclient":
-                filter.MaxLogLevelClient = int.Parse(value);
+                if (String.IsNullOrWhiteSpace(value)) { filter.MaxLogLevelClient = null; }
+                else if(int.TryParse(value, out int maxLogLevelClient))
+                { filter.MaxLogLevelClient = maxLogLevelClient; }
+                Console.WriteLine($"Set Max Log Level Client to: {filter.MaxLogLevelClient}");
                 break;
             case "transactionid":
-                filter.TransactionID = Guid.Parse(value);
+                if (String.IsNullOrWhiteSpace(value)) { filter.TransactionID = null; }
+                else if(Guid.TryParse(value, out Guid transactionID))
+                { filter.TransactionID = transactionID; }
+                Console.WriteLine($"Set Transaction ID to: {filter.TransactionID}");
                 break;
+            case "command":
             case "commandmask":
-                var candidateCommand = Enum.Parse(typeof(Commands), value, true);
-                if (candidateCommand != null) { filter.CommandMask = (Commands)candidateCommand; }
-                else if(int.TryParse(value, out int commandMask)) { filter.CommandMask = (Commands)commandMask; }
+                if(String.IsNullOrWhiteSpace(value)) { filter.CommandMask = null; }
+                else if(Enum.TryParse(typeof(Commands), value, true, out object candidateCommand))
+                { filter.CommandMask = (Commands)candidateCommand; }
+                else if(int.TryParse(value, out int commandMask)) 
+                { filter.CommandMask = (Commands)commandMask;  }
+                else
+                {
+                    Console.WriteLine($"Unable to parse and set Command Mask to {value}");
+                }
+                Console.WriteLine($"Set Command Mask to {filter.CommandMask}");
                 break;
             case "beginservertimestamp":
-                filter.BeginServerTimestamp = DateTime.Parse(value);
+                if (String.IsNullOrWhiteSpace(value)) { filter.BeginServerTimestamp = null; }
+                else if (DateTime.TryParse(value, out DateTime beginServerTimestamp))
+                { filter.BeginServerTimestamp = beginServerTimestamp; }
+                Console.WriteLine($"Set Begin Server Timestamp to {filter.BeginServerTimestamp}");
                 break;
             case "endservertimestamp":
-                filter.EndServerTimestamp = DateTime.Parse(value);
+                if (String.IsNullOrWhiteSpace(value)) { filter.EndServerTimestamp = null; }
+                else if (DateTime.TryParse(value, out DateTime endServerTimestamp))
+                { filter.EndServerTimestamp = endServerTimestamp;  }
+                Console.WriteLine($"Set End Server Timestamp to {filter.EndServerTimestamp}");
                 break;
         }
     }

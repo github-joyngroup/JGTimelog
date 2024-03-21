@@ -27,7 +27,7 @@ namespace Timelog.Common.Models
         /// 4 bytes that represent the domain - will be handled as an IP address for filtering purposes
         /// </summary>
         [ProtoMember(2)] 
-        public int Domain { get; set; }
+        public uint Domain { get; set; }
 
         /// <summary>
         /// Log Level of the message

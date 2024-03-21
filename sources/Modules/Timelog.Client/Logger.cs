@@ -42,7 +42,7 @@ namespace Timelog.Client
         }
 
         //Log Methods
-        public static void Log(LogLevel logLevel, int domain, Guid transactionId, long? clientTag = null)
+        public static void Log(LogLevel logLevel, uint domain, Guid transactionId, long? clientTag = null)
         {
             LogMessage logMessage = new LogMessage()
             {
@@ -58,7 +58,7 @@ namespace Timelog.Client
         }
 
 
-        public static LogMessage LogStart(LogLevel logLevel, int domain, Guid transactionId, long? clientTag = null)
+        public static LogMessage LogStart(LogLevel logLevel, uint domain, Guid transactionId, long? clientTag = null)
         {
             LogMessage logMessage = new LogMessage()
             {
@@ -73,13 +73,13 @@ namespace Timelog.Client
             return Log(logMessage);
         }
 
-        public static void LogStop(LogMessage startLogMessage)
+        public static void LogStop(LogMessage startLogMessage, long? clientTag = null)
         {
             LogMessage logMessage = new LogMessage()
             {
                 Domain = startLogMessage.Domain,
                 ClientLogLevel = startLogMessage.ClientLogLevel,
-                ClientTag = startLogMessage.ClientTag,
+                ClientTag = clientTag ?? startLogMessage.ClientTag,
                 TransactionID = startLogMessage.TransactionID,
                 Command = Commands.Stop,
                 OriginTimestamp = DateTime.UtcNow,

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -58,13 +59,13 @@ namespace Timelog.Common.Models
         /// 4 bytes that represent the base domain - should be parsable to an IP address
         /// </summary>
         [ProtoMember(6)]
-        public int? BaseDomain { get; set; }
+        public uint? BaseDomain { get; set; }
 
         /// <summary>
         /// 4 bytes that represent the domain mask - together with BaseDomain will allow network like filtering over log message domains
         /// </summary>
         [ProtoMember(7)]
-        public int? DomainMask { get; set; }
+        public uint? DomainMask { get; set; }
 
         /// <summary>
         /// The maximum log level that the client is interested in. Filter will return messages with log level less than or equal to this value
@@ -129,36 +130,25 @@ namespace Timelog.Common.Models
             //Check application key
             retBool = retBool && (ApplicationKey is null || logMessage.ApplicationKey == ApplicationKey.Value);
             //Check Domain
-            //retBool = retBool && (DomainMask is null || MatchesMask(logMessage.Domain, DomainMask));
+            if(BaseDomain is not null && DomainMask is not null)
+            {
+                //Similar to IP networks, we will calculate the mask network first by applying the mask to the domain
+                uint domainMaskNetwork = BaseDomain.Value & DomainMask.Value;
+                //We will then calculate the log message network by applying the same mask to the log message domain
+                uint logNetwork = logMessage.Domain & DomainMask.Value;
+                //Filter is interested in the message only if the networks match
+                retBool = retBool && (domainMaskNetwork == logNetwork);
+            }
             //Check Transaction Id
             retBool = retBool && (TransactionID is null || logMessage.TransactionID == TransactionID.Value);
             //Check Command
-            //retBool = retBool && (CommandMask is null || MatchesMask(BitConverter.GetBytes((int)logMessage.Command), CommandMask));
+            retBool = retBool && (CommandMask is null || logMessage.Command == CommandMask.Value);
             //Check Begin Server Timestamp
             retBool = retBool && (BeginServerTimestamp is null || logMessage.TimeServerTimeStamp >= BeginServerTimestamp.Value);
             //Check End Server Timestamp
             retBool = retBool && (EndServerTimestamp is null || logMessage.TimeServerTimeStamp <= EndServerTimestamp.Value);
 
             return retBool;
-        }
-
-        public static bool MatchesMask(byte[] field, byte[] mask)
-        {
-            if (field.Length != mask.Length)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < field.Length; i++)
-            {
-                // Apply the mask and compare
-                if ((field[i] & mask[i]) != field[i])
-                {
-                    return false; // Does not match the mask
-                }
-            }
-
-            return true; // All bytes match the mask
         }
     }
  
@@ -175,7 +165,6 @@ namespace Timelog.Common.Models
         /// The filter is On, messages will be returned live
         /// </summary>
         On = 1,
-
         /// <summary>The filter is in search mode, log files will be searched for matches</summary>
         Search = 2,
 

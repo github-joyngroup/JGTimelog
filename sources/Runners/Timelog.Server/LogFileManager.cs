@@ -306,7 +306,7 @@ namespace Timelog.Server
 
             _writer.Flush();
             //Update the last dump to file index with the current index
-            LastDumpToFileIndex = currentIndex +1;
+            LastDumpToFileIndex = currentIndex;
         }
 
         /// <summary>
@@ -391,12 +391,12 @@ namespace Timelog.Server
         /// <summary>
         /// The maximum number of entries per log file. Default is 100000.
         /// </summary>
-        public int MaxLogFileEntries { get; set; } = 100000;
+        public int MaxLogFileEntries { get; set; } = 1000;
 
         /// <summary>
         /// The number of entries that force a flush to log file. Default is 20000.
         /// </summary>
-        public int FlushItemsSize { get; set; } = 20000;
+        public int FlushItemsSize { get; set; } = 50;
 
         /// <summary>
         /// The number of seconds that force a flush to log file. Default is 30 seconds.

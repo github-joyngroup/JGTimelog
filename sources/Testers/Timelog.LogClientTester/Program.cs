@@ -60,7 +60,7 @@ namespace Timelog.LogClientTester
         private static void RunApplication(int nMessages)
         {
             Random r = new Random();
-            int[] validDomains = new int[] { TimelogDomains.AssetGateway, TimelogDomains.AssetGatewayDokRouter, TimelogDomains.AssetGatewayDokRouterInitPipeline, TimelogDomains.AssetGatewayDokRouterTickPipeline };
+            uint[] validDomains = new uint[] { TimelogDomains.AssetGateway, TimelogDomains.AssetGatewayDokRouter, TimelogDomains.AssetGatewayDokRouterInitPipeline, TimelogDomains.AssetGatewayDokRouterTickPipeline };
             Guid[] validGuids = new Guid[] {    Guid.Parse("04f7ad43-b89a-48a9-aa4c-49877aef3a63"),
                                                 Guid.Parse("d59e2dd7-7ab1-4a2d-98a8-b329b9bede1f"),
                                                 Guid.Parse("76b9524c-eef4-400d-88a2-04b4c4b2d4fa"),
@@ -82,14 +82,14 @@ namespace Timelog.LogClientTester
                     //Start operation
                     startMessage = Timelog.Client.Logger.LogStart(Microsoft.Extensions.Logging.LogLevel.Trace,
                             validDomains[r.Next(0, validDomains.Length)],
-                            validGuids[r.Next(0, validGuids.Length)]);
+                            validGuids[r.Next(0, validGuids.Length)], i);
 
                     hasStartMessage = true;
                 }
                 else if (hasStartMessage && r.NextDouble() < stopProbability)
                 {
                     //Stop operation
-                    Timelog.Client.Logger.LogStop(startMessage);
+                    Timelog.Client.Logger.LogStop(startMessage, i);
                     startMessage = default(LogMessage);
                     hasStartMessage = false;
                 }
@@ -98,15 +98,15 @@ namespace Timelog.LogClientTester
                     //Normal operation
                     Timelog.Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace,
                             validDomains[r.Next(0, validDomains.Length)],
-                            validGuids[r.Next(0, validGuids.Length)]);
+                            validGuids[r.Next(0, validGuids.Length)], i);
                 }
                 
                 i++;
                 //Thread.Sleep(1000); // 1 / second
-                Thread.Sleep(250); // 4 / second
+                //Thread.Sleep(250); // 4 / second
                 //Thread.Sleep(100);  // 10 / second
                 //Thread.Sleep(10);  // 100 / second
-                //Thread.Sleep(1);  // ~1000 / second
+                Thread.Sleep(1);  // ~1000 / second
             }
         }
 

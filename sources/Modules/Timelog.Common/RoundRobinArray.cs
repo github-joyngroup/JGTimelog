@@ -46,7 +46,10 @@ namespace Timelog.Common
             _array = new T[limit];
         }
 
-        public void Add(T item)
+        /// <summary>
+        /// Adds an entry to the round robin and returns it's index
+        /// </summary>
+        public int Add(T item)
         {
             _lock.EnterWriteLock();
             try
@@ -59,12 +62,13 @@ namespace Timelog.Common
                 {
                     _roundRobinCounter++;
                 }
-
+                return _index;
             }
             finally
             {
                 _lock.ExitWriteLock();
             }
+            
         }
 
 

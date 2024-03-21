@@ -202,17 +202,16 @@ namespace Timelog.Server
                     }
 
                     //Add the received data to the queue
-                    ReceivedDataQueue?.Add(receivedLogMessage);
-                    int auxCidx = ReceivedDataQueue.CurrentIndex - 1;
+                    int auxCidx = ReceivedDataQueue.Add(receivedLogMessage);
 
-                    if (auxCidx >= LogFileManager.LastDumpToFileIndex + LogFileManager.FlushItemsSize || //Already have more than FlushItemsSize items
-                        auxCidx < LogFileManager.LastDumpToFileIndex) //Round robined - could calculate the difference between the two indexes but will just to an extra dump file when round robined
+                    if ((auxCidx >= LogFileManager.LastDumpToFileIndex + LogFileManager.FlushItemsSize || //Already have more than FlushItemsSize items
+                        auxCidx < LogFileManager.LastDumpToFileIndex)) //Round robined - could calculate the difference between the two indexes but will just to an extra dump file when round robined
                     {
                         LogFileManager.Pulse();
                     }
 
-                    if (auxCidx >= ViewersServer.LastDumpToViewersIndex + ViewersServer.FlushItemsSize || //Already have more than FlushItemsSize items
-                        auxCidx < ViewersServer.LastDumpToViewersIndex) //Round robined - could calculate the difference between the two indexes but will just to an extra dump file when round robined
+                    if ((auxCidx >= ViewersServer.LastDumpToViewersIndex + ViewersServer.FlushItemsSize || //Already have more than FlushItemsSize items
+                        auxCidx < ViewersServer.LastDumpToViewersIndex)) //Round robined - could calculate the difference between the two indexes but will just to an extra dump file when round robined
                     {
                         ViewersServer.Pulse();
                     }
