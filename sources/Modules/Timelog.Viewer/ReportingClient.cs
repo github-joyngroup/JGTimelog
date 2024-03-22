@@ -78,9 +78,9 @@ namespace Timelog.Viewer
         /// <summary>
         /// Send message to the Timelog Reporting server to set a filter
         /// </summary>
-        public static void SetFilter(FilterCriteria filterCriteria)
+        public static void SetFilter(List<FilterCriteria> filterCriteria)
         {
-            _client.SetFilter(new List<FilterCriteria>() { filterCriteria });
+            _client.SetFilter(filterCriteria);
         }
 
         /// <summary>

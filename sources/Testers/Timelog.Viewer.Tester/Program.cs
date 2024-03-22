@@ -2,10 +2,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Timelog.Common.Models;
 using Timelog.Viewer;
@@ -42,6 +45,21 @@ var applicationKey = configuration.GetValue<Guid>("ApplicationKey");
 var reportingClientConfiguration = configuration.GetSection("ReportingClient").Get<ReportingClientConfiguration>();
 Timelog.Viewer.ReportingClient.Startup(applicationKey, reportingClientConfiguration, logger, HelperViewer.OnLogMessagesReceived);
 
+HelperViewer.WriteToConsole = configuration.GetValue<bool>("WriteToConsole");
+HelperViewer.WriteToFile = configuration.GetValue<bool>("WriteToFile");
+HelperViewer.WriteToFilePath = configuration.GetValue<string>("WriteToFilePath");
+if(String.IsNullOrWhiteSpace(HelperViewer.WriteToFilePath)) 
+{ 
+    HelperViewer.WriteToFile = false;
+    logger.LogWarning($"Write to file path is on but no File Path was provided. Will not log to file");
+}   
+
+//Create directory forHelperViewer.WriteToFilePath if it does not exist
+new System.IO.FileInfo(HelperViewer.WriteToFilePath).Directory.Create(); //Will not throw if directory already exists
+
+
+var filtersFilePath = configuration.GetValue<string>("FiltersFilePath");
+
 logger.LogInformation("Running... ");
 
 var hostTask = host.RunAsync();
@@ -72,20 +90,46 @@ do
     else if (readConsole == "start")
     {
         currentFilter.StateCode = (int)FilterCriteriaState.On;
-        Timelog.Viewer.ReportingClient.SetFilter(currentFilter);
+        Timelog.Viewer.ReportingClient.SetFilter(new List<FilterCriteria>() { currentFilter });
         Console.WriteLine($"Started real-time filtering...");
     }
     else if (readConsole == "stop")
     {
         currentFilter.StateCode = (int)FilterCriteriaState.Paused;
-        Timelog.Viewer.ReportingClient.SetFilter(currentFilter);
+        Timelog.Viewer.ReportingClient.SetFilter(new List<FilterCriteria>() { currentFilter });
         Console.WriteLine($"Stopped real-time filtering");
     }
     else if (readConsole == "search")
     {
         currentFilter.StateCode = (int)FilterCriteriaState.Search;
-        Timelog.Viewer.ReportingClient.SetFilter(currentFilter);
+        Timelog.Viewer.ReportingClient.SetFilter(new List<FilterCriteria>() { currentFilter });
         Console.WriteLine($"Applied Search Filter");
+    }
+    else if(readConsole == "file")
+    {
+        if (!File.Exists(filtersFilePath))
+        {
+            Console.WriteLine($"No file exists at '{filtersFilePath}'");
+            continue;
+        }
+
+        List<FilterCriteria> filters = new List<FilterCriteria>();
+        try
+        {
+            filters = System.Text.Json.JsonSerializer.Deserialize<List<FilterCriteria>>(File.ReadAllText(filtersFilePath));
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine("Error deserializing filters from file: " + ex.Message);
+        }
+
+        if(!filters.Any())
+        {
+            Console.WriteLine($"No filters found in file '{filtersFilePath}'");
+            continue;
+        }
+        filters.ForEach(f => f.ViewerGuid = applicationKey); //Set the viewer guid for all filters
+        Timelog.Viewer.ReportingClient.SetFilter(filters);
     }
     else if (readConsole.Contains("="))
     {
@@ -123,6 +167,12 @@ class MainTimelogViewer { }
 
 static class HelperViewer
 {
+    internal static bool WriteToConsole { get; set; }
+    internal static bool WriteToFile { get; set; }
+    internal static string WriteToFilePath { get; set; }
+
+    private static object WriteToFileLock = new object();
+
     public static void WriteInstructions()
     {
         Console.Clear();
@@ -133,6 +183,7 @@ static class HelperViewer
         Console.WriteLine("start = starts real time logging");
         Console.WriteLine("stop = stops real time logging");
         Console.WriteLine("search = performs search logging");
+        Console.WriteLine("file = loads file with filters and set them");
         Console.WriteLine("help or h = Clears console and writes this instructions again");
         
         Console.WriteLine("Press Enter to send...");
@@ -209,46 +260,6 @@ static class HelperViewer
         Console.WriteLine($"Viewer: {filter.ViewerGuid}\r\nState: {filter.StateCode}\r\nApplicationKey:{filter.ApplicationKey}\r\nDomain:{filter.DomainMask}\r\nMaxLogLevelClient:{filter.MaxLogLevelClient}\r\nTransaction:{filter.TransactionID}\r\nCommand:{filter.CommandMask}\r\nBeginServerTimestamp:{filter.BeginServerTimestamp}\r\nEndServerTimestamp:{filter.EndServerTimestamp}");
     }
 
-
-    /// <summary>
-    /// Instructions for old way to interact with the program with pre made filters
-    /// </summary>
-    public static void WriteInstructions_OLD()
-    {
-        Console.Clear();
-
-        Console.WriteLine("Write Command to Send to Server");
-        Console.WriteLine("1 = Set Filter A - matches application with lot's of logs");
-        Console.WriteLine("2 = Set Filter B - matches application with fewer number of logs");
-        Console.WriteLine("3 = Set Filter C - does not match");
-
-        Console.WriteLine("4 = Search Filter A - matches application with lot's of logs");
-        Console.WriteLine("5 = Search Filter B - matches application with fewer number of logs");
-        Console.WriteLine("6 = Search Filter C - does not match");
-
-        Console.WriteLine("help or h = Clears console and writes this instructions again");
-
-        Console.WriteLine("Press Enter to send...");
-        Console.WriteLine("An empty string will terminate the program.");
-    }
-
-    public static void SetFilter_OLD(Guid applicationGuid, Guid filterApplicationGuid, bool searchMode)
-    {
-        FilterCriteria filterCriteria = new FilterCriteria()
-        {
-            ViewerGuid = applicationGuid,
-            ApplicationKey = filterApplicationGuid,
-            StateCode = searchMode ? (int)FilterCriteriaState.Search : (int)FilterCriteriaState.On,
-            DomainMask = null,
-            MaxLogLevelClient = null,
-            TransactionID = null,
-            CommandMask = null,
-            BeginServerTimestamp = null,
-            EndServerTimestamp = null
-        };
-        Timelog.Viewer.ReportingClient.SetFilter(filterCriteria);
-    }
-
     public static void GetFilter()
     {
         Timelog.Viewer.ReportingClient.GetFilter();
@@ -256,9 +267,36 @@ static class HelperViewer
 
     public static void OnLogMessagesReceived(List<LogMessage> messages)
     {
-        foreach(var message in messages)
+        if (WriteToConsole)
+        {
+            WriteLogMessagesToConsole(messages);
+        }
+
+        if (WriteToFile)
+        {
+            WriteLogMessagesToFile(messages);
+        }
+    }
+
+    private static void WriteLogMessagesToConsole(List<LogMessage> messages)
+    {
+        foreach (var message in messages)
         {
             Console.WriteLine($"{message.ApplicationKey} | {message.Domain} | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionID} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
+        }
+    }
+
+    private static void WriteLogMessagesToFile(List<LogMessage> messages)
+    {
+        var sb = new StringBuilder();
+        foreach (var message in messages)
+        {
+            sb.AppendLine($"{message.ApplicationKey} | {message.Domain} | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionID} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
+        }
+
+        lock (WriteToFileLock)
+        {
+            System.IO.File.AppendAllText(WriteToFilePath, sb.ToString());
         }
     }
 }

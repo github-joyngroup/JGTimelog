@@ -9,14 +9,14 @@ using Timelog.Common.Models;
 
 namespace Timelog.Reporting
 {
-    internal delegate void ViewerFiltersChangedHandler(Guid changedViewer, Dictionary<Guid, FilterCriteria> currentFilters);
+    internal delegate void ViewerFiltersChangedHandler(Guid changedViewer, Dictionary<Guid, List<FilterCriteria>> currentFilters);
 
     internal class ViewerFiltersHandler
     {
         /// <summary>
         /// Dictionary of filters for each viewer, identified by the viewer's Guid
         /// </summary>
-        private static Dictionary<Guid, FilterCriteria> viewerFilterCriterias = new Dictionary<Guid, FilterCriteria>();
+        private static Dictionary<Guid, List<FilterCriteria>> viewerFilterCriterias = new Dictionary<Guid, List<FilterCriteria>>();
         private static ReaderWriterLockSlim viewerFilterCriteriasLock = new ReaderWriterLockSlim();
 
         internal static event ViewerFiltersChangedHandler OnViewerFiltersChanged;
@@ -36,24 +36,25 @@ namespace Timelog.Reporting
         /// <summary>
         /// Will add or update a filter to the viewer's filters
         /// </summary>
-        public static void AddFilter(FilterCriteria filter)
+        public static void AddFilters(Guid viewerGuid, List<FilterCriteria> filters)
         {
             if(_applicationKey == Guid.Empty)
             {
                 _logger?.LogWarning("Misconfiguration of ViewerFiltersHandler, ApplicationKey is empty - Check if being correcly initialized in Program.");
             }
-            filter.ReportingServerGuid = _applicationKey;
+            filters.ForEach(f => f.ReportingServerGuid = _applicationKey);
+
             viewerFilterCriteriasLock.EnterWriteLock();
             try
             {
-                viewerFilterCriterias[filter.ViewerGuid.Value] = filter;
+                viewerFilterCriterias[viewerGuid] = filters;
             }
             finally
             {
                 viewerFilterCriteriasLock.ExitWriteLock();
             }
 
-            OnViewerFiltersChanged?.Invoke(filter.ViewerGuid.Value, viewerFilterCriterias);
+            OnViewerFiltersChanged?.Invoke(viewerGuid, viewerFilterCriterias);
         }
 
         /// <summary>
@@ -87,7 +88,7 @@ namespace Timelog.Reporting
         /// <summary>
         /// Obtains a single filter identified by it's viewers guid
         /// </summary>
-        public static FilterCriteria GetFilter(Guid viewerGuid)
+        public static List<FilterCriteria> GetFilters(Guid viewerGuid)
         {
             viewerFilterCriteriasLock.EnterReadLock();
             try
@@ -115,7 +116,7 @@ namespace Timelog.Reporting
             viewerFilterCriteriasLock.EnterReadLock();
             try
             {
-                return viewerFilterCriterias.Values.ToList();
+                return viewerFilterCriterias.Values.SelectMany(fc => fc.ToList()).ToList();
             }
             finally
             {
@@ -134,7 +135,7 @@ namespace Timelog.Reporting
             try
             {
                 Dictionary<Guid, List<Timelog.Common.Models.LogMessage>> viewerPackages =
-                    viewerFilterCriterias.ToDictionary(vfc => vfc.Key, vfc => logMessages.FindAll(lm => vfc.Value.Matches(lm)));
+                    viewerFilterCriterias.ToDictionary(vfc => vfc.Key, vfc => logMessages.FindAll(lm => vfc.Value.Any(f => f.Matches(lm))));
 
                 foreach (var viewerPackage in viewerPackages)
                 {

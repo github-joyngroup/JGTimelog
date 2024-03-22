@@ -68,13 +68,13 @@ namespace Timelog.Reporting
                 case TimelogTCPOperation.SetFilter:
                     if (filters.Any())
                     {
-                        ViewerFiltersHandler.AddFilter(filters.First());
+                        ViewerFiltersHandler.AddFilters(clientGuid, filters);
                     }
                     break;
 
                 case TimelogTCPOperation.GetFilter:
-                    var filter = ViewerFiltersHandler.GetFilter(clientGuid);
-                    _server.SendCurrentFilter(clientGuid, new List<FilterCriteria>() { filter });
+                    var retFilters = ViewerFiltersHandler.GetFilters(clientGuid);
+                    _server.SendCurrentFilter(clientGuid, retFilters);
                     break;
 
                 default:

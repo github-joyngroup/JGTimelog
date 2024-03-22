@@ -49,6 +49,7 @@ Timelog.Reporting.ViewerServer.Startup(viewerServerConfiguration, logger);
 
 logger.LogInformation("Running... ");
 
+#if DEBUG
 var hostTask = host.RunAsync();
 
 Console.WriteLine("Commands:");
@@ -85,6 +86,10 @@ do
         Timelog.Reporting.ViewerServer.BroadcastMessage(readConsole);
     }
 } while (readConsole != ""); //Empty string will terminate the program
+
+#else
+    host.Run();
+#endif
 
 logger.LogInformation("Terminated. ");
 

@@ -83,24 +83,27 @@ namespace Timelog.Reporting
         /// </summary>
         /// <param name="currentFilters"></param>
         /// <exception cref="NotImplementedException"></exception>
-        private static void ViewerFiltersHandler_OnViewerFiltersChanged(Guid changedViewer, Dictionary<Guid, FilterCriteria> currentFilters)
+        private static void ViewerFiltersHandler_OnViewerFiltersChanged(Guid changedViewer, Dictionary<Guid, List<FilterCriteria>> currentFilters)
         {
-            FilterCriteria changedViewerFilter = null;
-            if (currentFilters.TryGetValue(changedViewer, out changedViewerFilter))
+            List<FilterCriteria> changedViewerFilters = null;
+            if (currentFilters.TryGetValue(changedViewer, out changedViewerFilters))
             {
-                if(changedViewerFilter.State == FilterCriteriaState.Search && !String.IsNullOrWhiteSpace(_configuration.TimelogServerLogFileDirectory))
+                foreach (var changedViewerFilter in changedViewerFilters)
                 {
-                    //Async call to the File system to get the log messages that match the filter
-                    Task.Run(() =>
+                    if (changedViewerFilter.State == FilterCriteriaState.Search && !String.IsNullOrWhiteSpace(_configuration.TimelogServerLogFileDirectory))
                     {
-                        var logMessages = LogMessageFileHandler.SearchLogFiles(changedViewerFilter, _configuration.TimelogServerLogFileDirectory);
-                        ViewerServer.SendLogMessages(changedViewer, logMessages);
-                    });
+                        //Async call to the File system to get the log messages that match the filter
+                        Task.Run(() =>
+                        {
+                            var logMessages = LogMessageFileHandler.SearchLogFiles(changedViewerFilter, _configuration.TimelogServerLogFileDirectory);
+                            ViewerServer.SendLogMessages(changedViewer, logMessages);
+                        });
+                    }
                 }
             }
 
             //Update the server with the new filters
-            _client.SetFilter(currentFilters.Values.ToList());
+            _client.SetFilter(currentFilters.Values.SelectMany(fc => fc.ToList()).ToList());
         }
     }
 

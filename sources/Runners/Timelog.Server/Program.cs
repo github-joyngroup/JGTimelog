@@ -52,6 +52,7 @@ Timelog.Server.LogFileManager.Startup(logFileManagerConfiguration, UDPListener.R
 
 logger.LogInformation("Running... ");
 
+#if DEBUG
 var hostTask = host.RunAsync();
 
 //Console.WriteLine("1: List all connected clients");
@@ -65,7 +66,9 @@ do
     readConsole = Console.ReadLine();
     readConsole = "";//Force termination
 } while (readConsole != ""); //Empty string will terminate the program
-
+#else
+    host.Run();
+#endif
 
 logger.LogInformation("Terminated. ");
 
