@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  timelogserver:
+    image: timelogserver:${TAG}
+    container_name: timelogserver
+    hostname: timelogserver
+    ports:
+     - "7771:7771/udp"
+     - "7772:7772"
+    volumes:
+      - "./volumes/timelogserver/configurations/appsettings.json:/app/appsettings.json"
+      - "./volumes/timelogserver/logs:/logs"
+
+  timelogreporting:
+    image: timelogreporting:${TAG}
+    container_name: timelogreporting
+    hostname: timelogreporting
+    volumes:
+      - "./volumes/timelogreporting/configurations/appsettings.json:/app/appsettings.json"
+      - "./volumes/timelogreporting/logs:/logs"
+    depends_on:
+      - timelogserver
