@@ -52,19 +52,20 @@ Timelog.Server.LogFileManager.Startup(logFileManagerConfiguration, UDPListener.R
 
 logger.LogInformation("Running... ");
 
-var hostTask = host.RunAsync();
+host.Run();
+//var hostTask = host.RunAsync();
 
 //Console.WriteLine("1: List all connected clients");
 //Console.WriteLine("2: List all filters");
 
-Console.WriteLine("Press Enter to terminate...");
+//Console.WriteLine("Press Enter to terminate...");
 
-var readConsole = "";
-do
-{
-    readConsole = Console.ReadLine();
-    readConsole = "";//Force termination
-} while (readConsole != ""); //Empty string will terminate the program
+//var readConsole = "";
+//do
+//{
+//    readConsole = Console.ReadLine();
+//    readConsole = "";//Force termination
+//} while (readConsole != ""); //Empty string will terminate the program
 
 
 logger.LogInformation("Terminated. ");
