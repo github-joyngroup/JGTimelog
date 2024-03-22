@@ -15,6 +15,8 @@ services:
     image: timelogreporting:${TAG}
     container_name: timelogreporting
     hostname: timelogreporting
+    ports:
+     - "7781:7781"
     volumes:
       - "./volumes/timelogreporting/configurations/appsettings.json:/app/appsettings.json"
       - "./volumes/timelogreporting/logs:/logs"
