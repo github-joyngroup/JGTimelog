@@ -282,7 +282,7 @@ static class HelperViewer
     {
         foreach (var message in messages)
         {
-            Console.WriteLine($"{message.ApplicationKey} | {message.Domain} | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionID} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
+            Console.WriteLine($"{message.ApplicationKey} | {UIntToIPAddress(message.Domain)}  | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionID} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
         }
     }
 
@@ -291,12 +291,23 @@ static class HelperViewer
         var sb = new StringBuilder();
         foreach (var message in messages)
         {
-            sb.AppendLine($"{message.ApplicationKey} | {message.Domain} | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionID} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
+            sb.AppendLine($"{message.ApplicationKey} | {UIntToIPAddress(message.Domain)} | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionID} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
         }
 
         lock (WriteToFileLock)
         {
             System.IO.File.AppendAllText(WriteToFilePath, sb.ToString());
         }
+    }
+
+    public static string UIntToIPAddress(uint ipUint)
+    {
+        byte[] bytes = BitConverter.GetBytes(ipUint);
+        if (BitConverter.IsLittleEndian)
+        {
+            // Reverse the byte array if the system architecture is little endian
+            Array.Reverse(bytes);
+        }
+        return string.Join(".", bytes);
     }
 }

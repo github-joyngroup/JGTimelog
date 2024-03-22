@@ -1,17 +1,5 @@
 [  
   {
-    "ApplicationKey": "33354290-b0a6-492b-8e97-aa84492d1c7e",
-    "__States": "Paused=0, On=1, Search=2",
-    "StateCode": 2,
-    "BaseDomain": null,
-    "DomainMask": null,
-    "MaxLogLevelClient": null,
-    "TransactionId": "04f7ad43-b89a-48a9-aa4c-49877aef3a63",
-    "CommandMask": null,
-    "BeginServerTimestamp": null,
-    "EndServerTimestamp": null
-  },
-  {
     "ApplicationKey": null,
     "__States": "Paused=0, On=1, Search=2",
     "StateCode": 1,
@@ -20,7 +8,7 @@
     "MaxLogLevelClient": null,
     "TransactionId": null,
     "CommandMask": null,
-    "BeginServerTimestamp": "2054-03-01T00:00:00Z",
-    "EndServerTimestamp": "2054-03-31T00:00:00Z"
+    "BeginServerTimestamp": null,
+    "EndServerTimestamp": null
   }
 ]

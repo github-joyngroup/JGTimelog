@@ -500,11 +500,11 @@ namespace Timelog.Server.Viewers
         /// <summary>
         /// Frequency to flush the log entries back to the viewers
         /// </summary>
-        public int FlushTimeSeconds { get; set; } = 10;
+        public int FlushTimeSeconds { get; set; } = 1;
 
         /// <summary>
         /// The number of entries that force a flush to the viewers. Default is 5000.
         /// </summary>
-        public int FlushItemsSize { get; set; } = 50;
+        public int FlushItemsSize { get; set; } = 5000;
     }
 }
