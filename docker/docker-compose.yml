@@ -19,6 +19,7 @@ services:
      - "7781:7781"
     volumes:
       - "./volumes/timelogreporting/configurations/appsettings.json:/app/appsettings.json"
-      - "./volumes/timelogreporting/logs:/logs"
+      - "./volumes/timelogreporting/logs:/logs/TimelogReporting"
+      - "./volumes/timelogserver/logs/TimelogServerRecords:/logs/TimelogServerRecords"
     depends_on:
       - timelogserver
