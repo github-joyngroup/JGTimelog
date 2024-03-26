@@ -71,7 +71,7 @@ FilterCriteria currentFilter = new FilterCriteria()
     StateCode = (int)FilterCriteriaState.Paused,
     DomainMask = null,
     MaxLogLevelClient = null,
-    TransactionID = null,
+    TransactionIDs = null,
     CommandMask = null,
     BeginServerTimestamp = null,
     EndServerTimestamp = null
@@ -105,7 +105,7 @@ do
         Timelog.Viewer.ReportingClient.SetFilter(new List<FilterCriteria>() { currentFilter });
         Console.WriteLine($"Applied Search Filter");
     }
-    else if(readConsole == "file")
+    else if (readConsole == "file")
     {
         if (!File.Exists(filtersFilePath))
         {
@@ -131,7 +131,7 @@ do
         filters.ForEach(f => f.ViewerGuid = applicationKey); //Set the viewer guid for all filters
         Timelog.Viewer.ReportingClient.SetFilter(filters);
     }
-    else if (readConsole.Contains("="))
+    else if (readConsole != null && readConsole.Contains("="))
     {
         var parts = readConsole.Split('=');
         var field = parts[0];
@@ -139,8 +139,8 @@ do
         HelperViewer.SetFilter(currentFilter, field, value);
     }
 
-    else if (readConsole.ToLower().Trim() == "help" || readConsole.ToLower().Trim() == "h") { HelperViewer.WriteInstructions(); }
-} while (readConsole != ""); //Empty string will terminate the program
+    else if (readConsole != null && readConsole.ToLower().Trim() == "help" || readConsole != null && readConsole.ToLower().Trim() == "h") { HelperViewer.WriteInstructions(); }
+} while (readConsole != "" && readConsole != null); //Empty string will terminate the program
 
 //Guid filterA = Guid.Parse("33354290-b0a6-492b-8e97-aa84492d1c7e");
 //Guid filterB = Guid.Parse("1cfa7816-5d2f-4ea1-a2d9-dabf09f37ba0");
@@ -188,7 +188,7 @@ static class HelperViewer
         
         Console.WriteLine("Press Enter to send...");
         Console.WriteLine("An empty string will terminate the program.");
-        Console.WriteLine("Valid fields to be set are: (ApplicationKey, BaseDomain, Domain or DomainMask, MaxLogLevelClient, TransactionID, Command or CommandMask, BeginServerTimestamp, EndServerTimestamp)");
+        Console.WriteLine("Valid fields to be set are: (ApplicationKey, BaseDomain, Domain or DomainMask, MaxLogLevelClient, TransactionIDs, Command or CommandMask, BeginServerTimestamp, EndServerTimestamp)");
         Console.WriteLine();
     }
 
@@ -221,11 +221,16 @@ static class HelperViewer
                 { filter.MaxLogLevelClient = maxLogLevelClient; }
                 Console.WriteLine($"Set Max Log Level Client to: {filter.MaxLogLevelClient}");
                 break;
-            case "transactionid":
-                if (String.IsNullOrWhiteSpace(value)) { filter.TransactionID = null; }
-                else if(Guid.TryParse(value, out Guid transactionID))
-                { filter.TransactionID = transactionID; }
-                Console.WriteLine($"Set Transaction ID to: {filter.TransactionID}");
+            case "transactionids":
+                if (String.IsNullOrWhiteSpace(value)) { filter.TransactionIDs = null; }
+                else
+                {
+                    var transactionIDs = value.Split(',').Select(t =>
+                    {
+                        return Guid.TryParse(t.Trim(), out Guid tId) ? tId : Guid.Empty;
+                    }).Where(tId => tId != Guid.Empty).ToList();
+                    Console.WriteLine($"Set Transaction ID to: {string.Join(", ", filter.TransactionIDs)}");
+                }
                 break;
             case "command":
             case "commandmask":

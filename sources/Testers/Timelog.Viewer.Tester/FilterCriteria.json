@@ -2,13 +2,14 @@
   {
     "ApplicationKey": null,
     "__States": "Paused=0, On=1, Search=2",
-    "StateCode": 1,
+    "StateCode": 2,
     "BaseDomain": null,
     "DomainMask": null,
     "MaxLogLevelClient": null,
-    "TransactionId": null,
+    "TransactionID": "dadeccbc-ae75-4f79-817a-34e80effd831",
+    "TransactionIDs": null,
     "CommandMask": null,
-    "BeginServerTimestamp": null,
+    "BeginServerTimestamp": "2024-03-26T16:50:00",
     "EndServerTimestamp": null
   }
 ]
