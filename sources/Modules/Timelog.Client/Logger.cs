@@ -111,7 +111,7 @@ namespace Timelog.Client
                 ClientLogLevel = (int)logLevel,
                 ClientTag = clientTag ?? 0,
                 TransactionID = transactionId,
-                Command = Commands.Start,
+                Command = Commands.Stop,
                 OriginTimestamp = DateTime.UtcNow,
                 ExecutionTime = startTimestamp.HasValue ? DateTime.UtcNow - startTimestamp.Value : null
             };

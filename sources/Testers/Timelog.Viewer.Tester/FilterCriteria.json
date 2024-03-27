@@ -6,10 +6,10 @@
     "BaseDomain": null,
     "DomainMask": null,
     "MaxLogLevelClient": null,
-    "TransactionID": "dadeccbc-ae75-4f79-817a-34e80effd831",
+    "TransactionID": "16a854ef-2f41-4675-955f-953ca9596997",
     "TransactionIDs": null,
     "CommandMask": null,
-    "BeginServerTimestamp": "2024-03-26T16:50:00",
+    "BeginServerTimestamp": null,
     "EndServerTimestamp": null
   }
 ]
