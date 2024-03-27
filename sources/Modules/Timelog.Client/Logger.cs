@@ -100,6 +100,26 @@ namespace Timelog.Client
         }
 
         /// <summary>
+        /// Will create a log message with the Stop command and send it to the server, the log message will be returned to be used in the corresponding Stop Command
+        /// There is an option DateTime command that, when filled, will be used to calculate the execution time
+        /// </summary>
+        public static void LogStop(LogLevel logLevel, uint domain, Guid transactionId, long? clientTag = null, DateTime? startTimestamp = null)
+        {
+            LogMessage logMessage = new LogMessage()
+            {
+                Domain = domain,
+                ClientLogLevel = (int)logLevel,
+                ClientTag = clientTag ?? 0,
+                TransactionID = transactionId,
+                Command = Commands.Start,
+                OriginTimestamp = DateTime.UtcNow,
+                ExecutionTime = startTimestamp.HasValue ? DateTime.UtcNow - startTimestamp.Value : null
+            };
+
+            Log(logMessage);
+        }
+
+        /// <summary>
         /// Sends the LogMessage to the UDP channel
         /// </summary>
         private static LogMessage Log(LogMessage message)
