@@ -12,6 +12,15 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Timelog.Common.Models;
 using Timelog.Viewer;
+using OfficeOpenXml;
+using Timelog.Viewer.Tester;
+
+
+Excel.Produce("C:\\Logs\\Joyn\\TimelogViewer\\TimeLogViewer-Excel.xlsx", "C:\\Logs\\Joyn\\TimelogViewer\\TimeLogViewer-ExcelJson.log", 10);
+
+// Exit the program
+Environment.Exit(0);
+
 
 var builder = Host.CreateDefaultBuilder(args);
 
@@ -48,6 +57,9 @@ Timelog.Viewer.ReportingClient.Startup(applicationKey, reportingClientConfigurat
 HelperViewer.WriteToConsole = configuration.GetValue<bool>("WriteToConsole");
 HelperViewer.WriteToFile = configuration.GetValue<bool>("WriteToFile");
 HelperViewer.WriteToFilePath = configuration.GetValue<string>("WriteToFilePath");
+HelperViewer.WriteToExcelJsonPath = configuration.GetValue<string>("WriteToExcelJsonPath");
+HelperViewer.WriteToExcelPath = configuration.GetValue<string>("WriteToExcelPath");
+HelperViewer.NumberColumns = configuration.GetValue<int>("NumberColumns");
 if(String.IsNullOrWhiteSpace(HelperViewer.WriteToFilePath)) 
 { 
     HelperViewer.WriteToFile = false;
@@ -172,6 +184,12 @@ static class HelperViewer
     internal static string WriteToFilePath { get; set; }
 
     private static object WriteToFileLock = new object();
+    internal static string WriteToExcelJsonPath { get; set; }
+    internal static string WriteToExcelPath { get; set; }
+
+    private static object WriteToFileExcelLock = new object();
+
+    internal static int NumberColumns { get; set; }
 
     public static void WriteInstructions()
     {
@@ -274,7 +292,8 @@ static class HelperViewer
 
         if (WriteToFile)
         {
-            WriteLogMessagesToFile(messages);
+            //WriteLogMessagesToFile(messages);
+            WriteLogMessagesToExcelFile(messages);
         }
     }
 
@@ -297,6 +316,21 @@ static class HelperViewer
         lock (WriteToFileLock)
         {
             System.IO.File.AppendAllText(WriteToFilePath, sb.ToString());
+        }
+    }
+
+    private static void WriteLogMessagesToExcelFile(List<LogMessage> messages)
+    {
+        var sb = new StringBuilder();
+        foreach (var message in messages)
+        {
+            sb.AppendLine($"{message.ApplicationKey} | {UIntToIPAddress(message.Domain)} | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionID} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
+        }
+
+        lock (WriteToFileExcelLock)
+        {
+            File.AppendAllText(WriteToExcelJsonPath, sb.ToString());
+            Excel.Produce(WriteToExcelPath, WriteToExcelJsonPath, NumberColumns);
         }
     }
 
