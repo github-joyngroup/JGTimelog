@@ -82,7 +82,7 @@ namespace Timelog.LogClientTester
                     //Start operation
                     startMessage = Timelog.Client.Logger.LogStart(Microsoft.Extensions.Logging.LogLevel.Trace,
                             validDomains[r.Next(0, validDomains.Length)],
-                            validGuids[r.Next(0, validGuids.Length)], i);
+                            validGuids[r.Next(0, validGuids.Length)], Guid.NewGuid(), i);
 
                     hasStartMessage = true;
                 }
@@ -98,7 +98,7 @@ namespace Timelog.LogClientTester
                     //Normal operation
                     Timelog.Client.Logger.Log(Microsoft.Extensions.Logging.LogLevel.Trace,
                             validDomains[r.Next(0, validDomains.Length)],
-                            validGuids[r.Next(0, validGuids.Length)], i);
+                            validGuids[r.Next(0, validGuids.Length)], Guid.NewGuid(), i);
                 }
                 
                 i++;

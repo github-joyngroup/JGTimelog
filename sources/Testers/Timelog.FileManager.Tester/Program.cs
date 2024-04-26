@@ -67,7 +67,7 @@ do
         var logEntries = LogMessageFileHandler.ReadLogMessages(file);
         foreach(var message in logEntries)
         {
-            Console.WriteLine($"{message.ApplicationKey} | {message.Domain} | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionID} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
+            Console.WriteLine($"{message.ApplicationKey} | {message.Domain} | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionId} | {message.ExecutionId} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
         }
     }
     else

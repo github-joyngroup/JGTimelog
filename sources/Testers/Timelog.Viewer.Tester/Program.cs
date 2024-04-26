@@ -71,7 +71,7 @@ FilterCriteria currentFilter = new FilterCriteria()
     StateCode = (int)FilterCriteriaState.Paused,
     DomainMask = null,
     MaxLogLevelClient = null,
-    TransactionIDs = null,
+    TransactionIds = null,
     CommandMask = null,
     BeginServerTimestamp = null,
     EndServerTimestamp = null
@@ -222,14 +222,14 @@ static class HelperViewer
                 Console.WriteLine($"Set Max Log Level Client to: {filter.MaxLogLevelClient}");
                 break;
             case "transactionids":
-                if (String.IsNullOrWhiteSpace(value)) { filter.TransactionIDs = null; }
+                if (String.IsNullOrWhiteSpace(value)) { filter.TransactionIds = null; }
                 else
                 {
                     var transactionIDs = value.Split(',').Select(t =>
                     {
                         return Guid.TryParse(t.Trim(), out Guid tId) ? tId : Guid.Empty;
                     }).Where(tId => tId != Guid.Empty).ToList();
-                    Console.WriteLine($"Set Transaction ID to: {string.Join(", ", filter.TransactionIDs)}");
+                    Console.WriteLine($"Set Transaction ID to: {string.Join(", ", filter.TransactionIds)}");
                 }
                 break;
             case "command":
@@ -262,7 +262,7 @@ static class HelperViewer
 
     public static void ShowFilter(FilterCriteria filter)
     {
-        Console.WriteLine($"Viewer: {filter.ViewerGuid}\r\nState: {filter.StateCode}\r\nApplicationKey:{filter.ApplicationKey}\r\nDomain:{filter.DomainMask}\r\nMaxLogLevelClient:{filter.MaxLogLevelClient}\r\nTransaction:{filter.TransactionID}\r\nCommand:{filter.CommandMask}\r\nBeginServerTimestamp:{filter.BeginServerTimestamp}\r\nEndServerTimestamp:{filter.EndServerTimestamp}");
+        Console.WriteLine($"Viewer: {filter.ViewerGuid}\r\nState: {filter.StateCode}\r\nApplicationKey:{filter.ApplicationKey}\r\nDomain:{filter.DomainMask}\r\nMaxLogLevelClient:{filter.MaxLogLevelClient}\r\nTransaction:{filter.TransactionId}\r\nCommand:{filter.CommandMask}\r\nBeginServerTimestamp:{filter.BeginServerTimestamp}\r\nEndServerTimestamp:{filter.EndServerTimestamp}");
     }
 
     public static void GetFilter()
@@ -287,7 +287,7 @@ static class HelperViewer
     {
         foreach (var message in messages)
         {
-            Console.WriteLine($"{message.ApplicationKey} | {UIntToIPAddress(message.Domain)}  | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionID} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
+            Console.WriteLine($"{message.ApplicationKey} | {UIntToIPAddress(message.Domain)}  | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionId}| {message.ExecutionId} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
         }
     }
 
@@ -296,7 +296,7 @@ static class HelperViewer
         var sb = new StringBuilder();
         foreach (var message in messages)
         {
-            sb.AppendLine($"{message.ApplicationKey} | {UIntToIPAddress(message.Domain)} | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionID} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
+            sb.AppendLine($"{message.ApplicationKey} | {UIntToIPAddress(message.Domain)} | {message.ClientLogLevel} | {message.ClientTag} | {message.TransactionId} | {message.ExecutionId} | {message.Command} | {message.OriginTimestamp} | {message.TimeServerTimeStamp} | {message.ExecutionTime} | {message.Reserved} | {message.MessageHeader} | {message.MessageData}");
         }
 
         lock (WriteToFileLock)

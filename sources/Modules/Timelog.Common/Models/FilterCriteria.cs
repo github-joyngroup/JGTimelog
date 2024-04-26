@@ -78,10 +78,10 @@ namespace Timelog.Common.Models
         /// The guid of the transaction we're interested in
         /// </summary>
         [ProtoMember(9)]
-        public Guid? TransactionID { get; set; }
+        public Guid? TransactionId { get; set; }
 
         [ProtoMember(13)]
-        public HashSet<Guid> TransactionIDs { get; set; }
+        public HashSet<Guid> TransactionIds { get; set; }
 
         /// <summary>
         /// A byte array that filters by command of the log message
@@ -143,9 +143,9 @@ namespace Timelog.Common.Models
                 retBool = retBool && (domainMaskNetwork == logNetwork);
             }
             //Check Transaction Id
-            retBool = retBool && (TransactionID is null || logMessage.TransactionID == TransactionID.Value);
+            retBool = retBool && (TransactionId is null || logMessage.TransactionId == TransactionId.Value);
             //Check Transaction Ids
-            retBool = retBool && (TransactionIDs is null || TransactionIDs.Contains(logMessage.TransactionID));
+            retBool = retBool && (TransactionIds is null || TransactionIds.Contains(logMessage.TransactionId));
             //Check Command
             retBool = retBool && (CommandMask is null || logMessage.Command == CommandMask.Value);
             //Check Begin Server Timestamp

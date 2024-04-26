@@ -279,6 +279,12 @@ namespace Timelog.Server
             int currentIndex = queueSnapshot.CurrentIndex;
             int fromIndex = LastDumpToFileIndex % queueSnapshot.LogMessages.Length;
 
+            if (fromIndex == currentIndex)
+            {
+                //Index did not change, no new messages
+                return;
+            }
+
             _logger.LogInformation($"Will dump to log file from Index {fromIndex} to {currentIndex}");
 
             //If has valid messages

@@ -77,7 +77,7 @@ do
         Console.WriteLine("Listing filters:");
         foreach(var filter in Timelog.Reporting.ViewerFiltersHandler.ListFilters())
         {
-            Console.WriteLine($"Viewer: {filter.ViewerGuid}\r\nState: {filter.State.ToString()}\r\nApplication:{filter.ApplicationKey}\r\nTransaction:{filter.TransactionID}\r\nCommand:{filter.CommandMask}\r\nDomain:{filter.BaseDomain} / {filter.DomainMask}");
+            Console.WriteLine($"Viewer: {filter.ViewerGuid}\r\nState: {filter.State.ToString()}\r\nApplication:{filter.ApplicationKey}\r\nTransaction:{filter.TransactionId}\r\nCommand:{filter.CommandMask}\r\nDomain:{filter.BaseDomain} / {filter.DomainMask}");
         }
         Timelog.Reporting.ViewerFiltersHandler.ListFilters();
     }

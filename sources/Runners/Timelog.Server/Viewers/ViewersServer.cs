@@ -405,6 +405,12 @@ namespace Timelog.Server.Viewers
             int currentIndex = queueSnapshot.CurrentIndex;
             int fromIndex = LastDumpToViewersIndex % queueSnapshot.LogMessages.Length;            
 
+            if(fromIndex == currentIndex) 
+            {
+                //Index did not change, no new messages
+                return; 
+            }
+
             //If no valid messages
             if (!queueSnapshot.LogMessages.Any(clm => clm.ApplicationKey != Guid.Empty))
             {

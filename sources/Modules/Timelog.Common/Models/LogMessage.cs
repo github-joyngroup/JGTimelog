@@ -45,7 +45,7 @@ namespace Timelog.Common.Models
         /// Id of the transaction, generally used to group several logs together to "tell a story"
         /// </summary>
         [ProtoMember(5)]
-        public Guid TransactionID { get; set; }
+        public Guid TransactionId { get; set; }
 
         /// <summary>
         /// Command associated with the log message
@@ -94,5 +94,12 @@ namespace Timelog.Common.Models
         /// </summary>
         [ProtoMember(13)]
         public long FilterBitmask { get; set; }
+
+        /// <summary>
+        /// Optional, Id of the execution, generally used to distinguish between executions of the same method/activity/step within a transaction
+        /// </summary>
+        [ProtoMember(14)]
+        public Guid? ExecutionId { get; set; }
+
     }
 }
