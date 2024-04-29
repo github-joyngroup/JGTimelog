@@ -54,9 +54,9 @@
   "MultiProjectConfigurations": {
     "Server + Reporting + Viewer": {
       "Projects": {
-        "Timelog.Server": {},
-        "Timelog.Reporting": {},
-        "Timelog.Viewer.Tester": {}
+        "Joyn.Timelog.Server": {},
+        "Joyn.Timelog.Reporting": {},
+        "Joyn.Timelog.Viewer.Tester": {}
       }
     }
   }
