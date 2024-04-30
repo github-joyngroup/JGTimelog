@@ -6,16 +6,16 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Runners/Timelog.Server/Timelog.Server.csproj", "Runners/Timelog.Server/"]
-COPY ["Modules/Timelog.Common/Timelog.Common.csproj", "Modules/Timelog.Common/"]
-RUN dotnet restore "./Runners/Timelog.Server/./Timelog.Server.csproj"
+COPY ["Runners/Joyn.Timelog.Server/Joyn.Timelog.Server.csproj", "Runners/Joyn.Timelog.Server/"]
+COPY ["Modules/Joyn.Timelog.Common/Joyn.Timelog.Common.csproj", "Modules/Joyn.Timelog.Common/"]
+RUN dotnet restore "./Runners/Joyn.Timelog.Server/./Joyn.Timelog.Server.csproj"
 COPY . .
-WORKDIR "/src/Runners/Timelog.Server"
-RUN dotnet build "./Timelog.Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/Runners/Joyn.Timelog.Server"
+RUN dotnet build "./Joyn.Timelog.Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Timelog.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Joyn.Timelog.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
@@ -24,4 +24,4 @@ COPY --from=publish /app/publish .
 RUN mkdir /logs
 RUN chmod 777 /logs
 
-ENTRYPOINT ["dotnet", "Timelog.Server.dll"]
+ENTRYPOINT ["dotnet", "Joyn.Timelog.Server.dll"]
