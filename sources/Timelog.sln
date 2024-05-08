@@ -9,21 +9,28 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Runners", "Runners", "{2656
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Testers", "Testers", "{A4B6A778-F8BD-4342-9821-19F5A0D93F1C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Joyn.Timelog.Client", "Modules\Joyn.Timelog.Client\Joyn.Timelog.Client.csproj", "{15D08250-41A5-4A06-A38B-F7D6FD7F6661}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Joyn.Timelog.Client", "Modules\Joyn.Timelog.Client\Joyn.Timelog.Client.csproj", "{15D08250-41A5-4A06-A38B-F7D6FD7F6661}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Joyn.Timelog.Common", "Modules\Joyn.Timelog.Common\Joyn.Timelog.Common.csproj", "{30379F90-76D2-40CA-8F20-BAA5F2925232}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Joyn.Timelog.Common", "Modules\Joyn.Timelog.Common\Joyn.Timelog.Common.csproj", "{30379F90-76D2-40CA-8F20-BAA5F2925232}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Joyn.Timelog.Viewer", "Modules\Joyn.Timelog.Viewer\Joyn.Timelog.Viewer.csproj", "{4317E50A-6114-4D67-90DB-6F0B603480CE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Joyn.Timelog.Viewer", "Modules\Joyn.Timelog.Viewer\Joyn.Timelog.Viewer.csproj", "{4317E50A-6114-4D67-90DB-6F0B603480CE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Joyn.Timelog.Reporting", "Runners\Joyn.Timelog.Reporting\Joyn.Timelog.Reporting.csproj", "{D0BA5891-6583-4905-871A-246A524F3C6D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Joyn.Timelog.Reporting", "Runners\Joyn.Timelog.Reporting\Joyn.Timelog.Reporting.csproj", "{D0BA5891-6583-4905-871A-246A524F3C6D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Joyn.Timelog.Server", "Runners\Joyn.Timelog.Server\Joyn.Timelog.Server.csproj", "{C0875C55-A9E7-4A1E-AAC2-10E6A1B4D4B5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Joyn.Timelog.Server", "Runners\Joyn.Timelog.Server\Joyn.Timelog.Server.csproj", "{C0875C55-A9E7-4A1E-AAC2-10E6A1B4D4B5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Joyn.Timelog.FileManager.Tester", "Testers\Joyn.Timelog.FileManager.Tester\Joyn.Timelog.FileManager.Tester.csproj", "{C450F427-6A65-4B95-B3B8-899AECF8D9F2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Joyn.Timelog.FileManager.Tester", "Testers\Joyn.Timelog.FileManager.Tester\Joyn.Timelog.FileManager.Tester.csproj", "{C450F427-6A65-4B95-B3B8-899AECF8D9F2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Joyn.Timelog.Viewer.Tester", "Testers\Joyn.Timelog.Viewer.Tester\Joyn.Timelog.Viewer.Tester.csproj", "{A1F620E1-AA44-406D-A312-F4FA236A4CA5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Joyn.Timelog.Viewer.Tester", "Testers\Joyn.Timelog.Viewer.Tester\Joyn.Timelog.Viewer.Tester.csproj", "{A1F620E1-AA44-406D-A312-F4FA236A4CA5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Joyn.Timelog.LogClient.Tester", "Testers\Joyn.Timelog.LogClient.Tester\Joyn.Timelog.LogClient.Tester.csproj", "{0C7EE4C1-D526-49A7-8B4F-EF22B0999679}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Joyn.Timelog.LogClient.Tester", "Testers\Joyn.Timelog.LogClient.Tester\Joyn.Timelog.LogClient.Tester.csproj", "{0C7EE4C1-D526-49A7-8B4F-EF22B0999679}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_docker", "_docker", "{21C2F1E5-1509-484B-9CCC-8B18F3A7F2FD}"
+	ProjectSection(SolutionItems) = preProject
+		..\docker\docker-compose.yml = ..\docker\docker-compose.yml
+		..\docker\TimelogReporting.Dockerfile = ..\docker\TimelogReporting.Dockerfile
+		..\docker\TimelogServer.Dockerfile = ..\docker\TimelogServer.Dockerfile
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

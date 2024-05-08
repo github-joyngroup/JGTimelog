@@ -38,10 +38,15 @@ namespace Joyn.Timelog.Client
             _logger = logger;
             _applicationKey = applicationKey;
 
+            if (_configuration.Disabled)
+            {
+                _logger?.LogInformation($"Timelog.Client is disabled at config no messages will be sent...");
+            }
+
             udpClient = new UdpClient();
             udpClient.Connect(_configuration.TimelogServerHost, _configuration.TimelogServerPort);
 
-            _logger?.LogInformation($"Timelog.Client...' is ready to log to the server {_configuration.TimelogServerHost}:{_configuration.TimelogServerPort}.");
+            _logger?.LogInformation($"Timelog.Client is ready to log to the server {_configuration.TimelogServerHost}:{_configuration.TimelogServerPort}.");
         }
 
         ///<summary>
@@ -49,6 +54,8 @@ namespace Joyn.Timelog.Client
         /// </summary>
         public static void Log(LogLevel logLevel, uint domain, Guid transactionId, Guid? executionId = null, long? clientTag = null)
         {
+            if (_configuration.Disabled) { return; }
+
             LogMessage logMessage = new LogMessage()
             {
                 Domain = domain,
@@ -68,6 +75,8 @@ namespace Joyn.Timelog.Client
         /// </summary>
         public static LogMessage LogStart(LogLevel logLevel, uint domain, Guid transactionId, Guid? executionId = null, long? clientTag = null)
         {
+            if (_configuration.Disabled) { return new LogMessage(); }
+
             LogMessage logMessage = new LogMessage()
             {
                 Domain = domain,
@@ -87,6 +96,8 @@ namespace Joyn.Timelog.Client
         /// </summary>
         public static void LogStop(LogMessage startLogMessage, long? clientTag = null)
         {
+            if (_configuration.Disabled) { return; }
+
             LogMessage logMessage = new LogMessage()
             {
                 Domain = startLogMessage.Domain,
@@ -108,6 +119,8 @@ namespace Joyn.Timelog.Client
         /// </summary>
         public static void LogStop(LogLevel logLevel, uint domain, Guid transactionId, Guid? executionId = null, long? clientTag = null, DateTime? startTimestamp = null)
         {
+            if (_configuration.Disabled) { return; }
+
             LogMessage logMessage = new LogMessage()
             {
                 Domain = domain,
@@ -128,6 +141,8 @@ namespace Joyn.Timelog.Client
         /// </summary>
         private static LogMessage Log(LogMessage message)
         {
+            if (_configuration.Disabled) { return new LogMessage(); }
+
             message.ApplicationKey = _applicationKey;
             byte[] logBytes = ProtoBufSerializer.Serialize(message);
             try
@@ -147,6 +162,11 @@ namespace Joyn.Timelog.Client
     /// </summary>
     public class LoggerConfiguration
     {
+        /// <summary>
+        /// When true, no logs will be sent to the server
+        /// </summary>
+        public bool Disabled { get; set; }
+
         /// <summary>
         /// The FQDN of the Timelog server or their IP address
         /// </summary>
