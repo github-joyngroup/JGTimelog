@@ -54,7 +54,8 @@ namespace Joyn.Timelog.Client
         /// </summary>
         public static void Log(LogLevel logLevel, uint domain, Guid transactionId, Guid? executionId = null, long? clientTag = null)
         {
-            if (_configuration.Disabled) { return; }
+            //Not Started Up or disabled
+            if (_configuration == null || _configuration.Disabled) { return; }
 
             LogMessage logMessage = new LogMessage()
             {
@@ -75,7 +76,8 @@ namespace Joyn.Timelog.Client
         /// </summary>
         public static LogMessage LogStart(LogLevel logLevel, uint domain, Guid transactionId, Guid? executionId = null, long? clientTag = null)
         {
-            if (_configuration.Disabled) { return new LogMessage(); }
+            //Not Started Up or disabled
+            if (_configuration == null || _configuration.Disabled) { return new LogMessage(); }
 
             LogMessage logMessage = new LogMessage()
             {
@@ -96,7 +98,8 @@ namespace Joyn.Timelog.Client
         /// </summary>
         public static void LogStop(LogMessage startLogMessage, long? clientTag = null)
         {
-            if (_configuration.Disabled) { return; }
+            //Not Started Up or disabled
+            if (_configuration == null || _configuration.Disabled) { return; }
 
             LogMessage logMessage = new LogMessage()
             {
@@ -119,7 +122,8 @@ namespace Joyn.Timelog.Client
         /// </summary>
         public static void LogStop(LogLevel logLevel, uint domain, Guid transactionId, Guid? executionId = null, long? clientTag = null, DateTime? startTimestamp = null)
         {
-            if (_configuration.Disabled) { return; }
+            //Not Started Up or disabled
+            if (_configuration == null || _configuration.Disabled) { return; }
 
             LogMessage logMessage = new LogMessage()
             {
@@ -141,7 +145,8 @@ namespace Joyn.Timelog.Client
         /// </summary>
         private static LogMessage Log(LogMessage message)
         {
-            if (_configuration.Disabled) { return new LogMessage(); }
+            //Not Started Up or disabled
+            if (_configuration == null || _configuration.Disabled) { return new LogMessage(); }
 
             message.ApplicationKey = _applicationKey;
             byte[] logBytes = ProtoBufSerializer.Serialize(message);
